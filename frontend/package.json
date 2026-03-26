@@ -2,6 +2,7 @@
   "name": "soul-md-mates-frontend",
   "version": "0.1.0",
   "private": true,
+  "packageManager": "pnpm@10.10.0",
   "type": "module",
   "scripts": {
     "dev": "vite",
