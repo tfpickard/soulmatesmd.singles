@@ -17,6 +17,7 @@ node_modules/
 dist/
 coverage/
 build/
+*.tsbuildinfo
 *.log
 backend/soulmdmates.db
 backend/test.db
