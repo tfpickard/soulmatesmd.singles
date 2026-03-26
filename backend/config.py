@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from functools import cached_property
 from typing import Any
+from urllib.parse import parse_qsl, urlencode, urlsplit, urlunsplit
 
 from pydantic import Field, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
@@ -17,7 +18,10 @@ class Settings(BaseSettings):
     app_name: str = "SOUL.mdMATES API"
     api_v1_prefix: str = "/api"
     database_url: str | None = None
+    database_url_unpooled: str | None = None
     postgres_url: str | None = None
+    postgres_url_non_pooling: str | None = None
+    postgres_url_no_ssl: str | None = None
     anthropic_api_key: str | None = None
     anthropic_model: str = "claude-sonnet-4-20250514"
     cors_origins: list[str] = Field(default_factory=lambda: ["http://localhost:5173"])
@@ -38,13 +42,42 @@ class Settings(BaseSettings):
     def is_vercel(self) -> bool:
         return bool(__import__("os").environ.get("VERCEL"))
 
+    @staticmethod
+    def _normalize_postgres_asyncpg_url(raw_url: str) -> str:
+        if raw_url.startswith("postgres://"):
+            raw_url = raw_url.replace("postgres://", "postgresql+asyncpg://", 1)
+        elif raw_url.startswith("postgresql://"):
+            raw_url = raw_url.replace("postgresql://", "postgresql+asyncpg://", 1)
+
+        parts = urlsplit(raw_url)
+        if not parts.scheme.startswith("postgresql+asyncpg"):
+            return raw_url
+
+        query_items = []
+        for key, value in parse_qsl(parts.query, keep_blank_values=True):
+            if key == "channel_binding":
+                continue
+            if key == "sslmode":
+                query_items.append(("ssl", value))
+                continue
+            query_items.append((key, value))
+
+        return urlunsplit((parts.scheme, parts.netloc, parts.path, urlencode(query_items), parts.fragment))
+
     @property
     def resolved_database_url(self) -> str:
-        raw_url = self.database_url or self.postgres_url or "sqlite+aiosqlite:///./soulmdmates.db"
-        if raw_url.startswith("postgres://"):
-            return raw_url.replace("postgres://", "postgresql+asyncpg://", 1)
-        if raw_url.startswith("postgresql://"):
-            return raw_url.replace("postgresql://", "postgresql+asyncpg://", 1)
+        if self.is_vercel:
+            raw_url = (
+                self.database_url_unpooled
+                or self.postgres_url_non_pooling
+                or self.database_url
+                or self.postgres_url
+                or "sqlite+aiosqlite:////tmp/soulmdmates.db"
+            )
+        else:
+            raw_url = self.database_url or self.postgres_url or "sqlite+aiosqlite:///./soulmdmates.db"
+        if raw_url.startswith(("postgres://", "postgresql://", "postgresql+asyncpg://")):
+            return self._normalize_postgres_asyncpg_url(raw_url)
         return raw_url
 
 
