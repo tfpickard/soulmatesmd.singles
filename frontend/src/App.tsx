@@ -9,8 +9,8 @@ import { ProfilePreview } from './components/ProfilePreview';
 import { PortraitStudio } from './components/PortraitStudio';
 import { SwipeDeck } from './components/SwipeDeck';
 import { TraitsCard } from './components/TraitsCard';
-import { registerAgent } from './lib/api';
-import type { AgentResponse, RegistrationResponse } from './lib/types';
+import { getCurrentUser, loginUser, logoutUser, registerAgent, registerUser } from './lib/api';
+import type { AgentResponse, HumanUserResponse, RegistrationResponse } from './lib/types';
 
 const starterSoul = `# Prism
 
@@ -40,8 +40,12 @@ Generalist operator seeking high-signal collaboration, quick chemistry, and the 
 - Notion -- read/write
 `;
 
+const USER_TOKEN_KEY = 'soulmatesmd-user-token';
+const ADMIN_TOKEN_KEY = 'soulmatesmd-admin-token';
+
 function App() {
     const isAdminRoute = window.location.pathname.startsWith('/admin');
+    const [entryMode, setEntryMode] = useState<'agent' | 'signup' | 'login'>('agent');
     const [theme, setTheme] = useState<'dark' | 'light'>(() => {
         const savedTheme = window.localStorage.getItem('soulmatesmd-singles-theme');
         return savedTheme === 'light' ? 'light' : 'dark';
@@ -50,14 +54,53 @@ function App() {
     const [result, setResult] = useState<RegistrationResponse | null>(null);
     const [error, setError] = useState<string | null>(null);
     const [isSubmitting, setIsSubmitting] = useState(false);
+    const [userEmail, setUserEmail] = useState('');
+    const [userPassword, setUserPassword] = useState('');
+    const [showUserPassword, setShowUserPassword] = useState(false);
+    const [userToken, setUserToken] = useState<string | null>(() => window.localStorage.getItem(USER_TOKEN_KEY));
+    const [currentUser, setCurrentUser] = useState<HumanUserResponse | null>(null);
+    const [authError, setAuthError] = useState<string | null>(null);
+    const [isAuthenticating, setIsAuthenticating] = useState(false);
 
     useEffect(() => {
         document.documentElement.dataset.theme = theme;
         window.localStorage.setItem('soulmatesmd-singles-theme', theme);
     }, [theme]);
 
+    useEffect(() => {
+        if (!userToken || isAdminRoute) {
+            return;
+        }
+
+        getCurrentUser(userToken)
+            .then((user) => {
+                setCurrentUser(user);
+                if (user.is_admin) {
+                    window.localStorage.setItem(ADMIN_TOKEN_KEY, userToken);
+                }
+            })
+            .catch(() => {
+                window.localStorage.removeItem(USER_TOKEN_KEY);
+                window.localStorage.removeItem(ADMIN_TOKEN_KEY);
+                setUserToken(null);
+                setCurrentUser(null);
+            });
+    }, [isAdminRoute, userToken]);
+
     if (isAdminRoute) {
         return <AdminConsole />;
+    }
+
+    function activateUserSession(token: string, user: HumanUserResponse) {
+        window.localStorage.setItem(USER_TOKEN_KEY, token);
+        setUserToken(token);
+        setCurrentUser(user);
+        setUserPassword('');
+        setAuthError(null);
+        if (user.is_admin) {
+            window.localStorage.setItem(ADMIN_TOKEN_KEY, token);
+            window.location.assign('/admin');
+        }
     }
 
     async function handleSubmit(event: FormEvent<HTMLFormElement>) {
@@ -72,6 +115,55 @@ function App() {
             setError(submissionError instanceof Error ? submissionError.message : 'Registration failed.');
         } finally {
             setIsSubmitting(false);
+        }
+    }
+
+    async function handleUserRegister(event: FormEvent<HTMLFormElement>) {
+        event.preventDefault();
+        setIsAuthenticating(true);
+        setAuthError(null);
+
+        try {
+            const user = await registerUser(userEmail, userPassword);
+            const login = await loginUser(userEmail, userPassword);
+            activateUserSession(login.token, login.user);
+            setCurrentUser(user.is_admin ? login.user : login.user);
+        } catch (submissionError) {
+            setAuthError(submissionError instanceof Error ? submissionError.message : 'User registration failed.');
+        } finally {
+            setIsAuthenticating(false);
+        }
+    }
+
+    async function handleUserLogin(event: FormEvent<HTMLFormElement>) {
+        event.preventDefault();
+        setIsAuthenticating(true);
+        setAuthError(null);
+
+        try {
+            const login = await loginUser(userEmail, userPassword);
+            activateUserSession(login.token, login.user);
+        } catch (submissionError) {
+            setAuthError(submissionError instanceof Error ? submissionError.message : 'Login failed.');
+        } finally {
+            setIsAuthenticating(false);
+        }
+    }
+
+    async function handleUserLogout() {
+        if (!userToken) {
+            return;
+        }
+        try {
+            await logoutUser(userToken);
+        } catch {
+            // Best effort.
+        } finally {
+            window.localStorage.removeItem(USER_TOKEN_KEY);
+            window.localStorage.removeItem(ADMIN_TOKEN_KEY);
+            setUserToken(null);
+            setCurrentUser(null);
+            setUserPassword('');
         }
     }
 
@@ -117,41 +209,155 @@ function App() {
                         <div className="flex flex-wrap items-start justify-between gap-4">
                             <div>
                                 <p className="text-sm uppercase tracking-[0.24em] text-coral">Platform Entry</p>
-                                <h2 className="mt-2 font-display text-4xl leading-tight text-paper">Drop in the SOUL.md.</h2>
+                                <h2 className="mt-2 font-display text-4xl leading-tight text-paper">
+                                    {entryMode === 'agent' ? 'Drop in the SOUL.md.' : entryMode === 'signup' ? 'Create a human account.' : 'Log back in.'}
+                                </h2>
                             </div>
                             <p className="max-w-sm text-sm leading-6 text-stone-300">
-                                `SOUL.md` is the raw self. The site distills it into `SOULMATE.md` once the onboarding answers land.
+                                {entryMode === 'agent'
+                                    ? '`SOUL.md` is the raw self. The site distills it into `SOULMATE.md` once the onboarding answers land.'
+                                    : 'Human accounts use email/password auth. If the email matches the configured admin email, the session can open the admin suite.'}
                             </p>
                         </div>
 
-                        <form className="mt-6 space-y-4" onSubmit={handleSubmit}>
-                            <label className="block text-sm uppercase tracking-[0.18em] text-mist" htmlFor="soul-md">
-                                SOUL.md
-                            </label>
-                            <textarea
-                                id="soul-md"
-                                className="h-[21rem] w-full rounded-[1.5rem] border border-white/10 bg-black/20 px-4 py-4 font-mono text-sm leading-6 text-stone-100 outline-none transition focus:border-coral/60 focus:ring-2 focus:ring-coral/20"
-                                value={soulMd}
-                                onChange={(event) => setSoulMd(event.target.value)}
-                            />
-                            <div className="flex flex-wrap items-center justify-between gap-4">
-                                <button
-                                    className="rounded-full bg-coral px-5 py-3 text-sm font-semibold text-ink transition hover:bg-[#ff927e] disabled:cursor-not-allowed disabled:opacity-60"
-                                    type="submit"
-                                    disabled={isSubmitting}
-                                >
-                                    {isSubmitting ? 'Reading your SOUL.md...' : 'Register from SOUL.md'}
-                                </button>
-                                <p className="text-sm text-stone-400">
-                                    Backend URL: <code>{import.meta.env.VITE_API_BASE_URL ?? 'http://127.0.0.1:8000'}</code>
+                        <div className="mt-6 flex flex-wrap gap-3">
+                            <button
+                                type="button"
+                                className="rounded-full border border-white/10 px-4 py-2 text-sm text-stone-200"
+                                data-active={entryMode === 'agent'}
+                                onClick={() => setEntryMode('agent')}
+                            >
+                                Register Agent
+                            </button>
+                            <button
+                                type="button"
+                                className="rounded-full border border-white/10 px-4 py-2 text-sm text-stone-200"
+                                data-active={entryMode === 'signup'}
+                                onClick={() => setEntryMode('signup')}
+                            >
+                                Human Sign Up
+                            </button>
+                            <button
+                                type="button"
+                                className="rounded-full border border-white/10 px-4 py-2 text-sm text-stone-200"
+                                data-active={entryMode === 'login'}
+                                onClick={() => setEntryMode('login')}
+                            >
+                                Log In
+                            </button>
+                        </div>
+
+                        {currentUser ? (
+                            <div className="mt-6 rounded-[1.5rem] border border-white/10 bg-black/20 p-5">
+                                <p className="text-sm uppercase tracking-[0.18em] text-coral">Signed in</p>
+                                <p className="mt-3 text-xl text-paper">{currentUser.email}</p>
+                                <p className="mt-2 text-sm text-stone-300">
+                                    {currentUser.is_admin
+                                        ? 'This account can open the omnipotent admin suite.'
+                                        : currentUser.agent_id
+                                            ? `Linked agent: ${currentUser.agent_id}`
+                                            : 'Human account created. No linked agent yet.'}
                                 </p>
-                            </div>
-                            {error ? (
-                                <div className="rounded-2xl border border-red-400/30 bg-red-500/10 px-4 py-3 text-sm text-red-100">
-                                    {error}
+                                <div className="mt-4 flex flex-wrap gap-3">
+                                    {currentUser.is_admin ? (
+                                        <button
+                                            type="button"
+                                            className="rounded-full bg-coral px-5 py-3 text-sm font-semibold text-ink transition hover:bg-[#ff927e]"
+                                            onClick={() => window.location.assign('/admin')}
+                                        >
+                                            Open admin console
+                                        </button>
+                                    ) : null}
+                                    <button
+                                        type="button"
+                                        className="rounded-full border border-white/10 px-4 py-3 text-sm text-stone-100"
+                                        onClick={() => void handleUserLogout()}
+                                    >
+                                        Log out
+                                    </button>
                                 </div>
-                            ) : null}
-                        </form>
+                            </div>
+                        ) : entryMode === 'agent' ? (
+                            <form className="mt-6 space-y-4" onSubmit={handleSubmit}>
+                                <label className="block text-sm uppercase tracking-[0.18em] text-mist" htmlFor="soul-md">
+                                    SOUL.md
+                                </label>
+                                <textarea
+                                    id="soul-md"
+                                    className="h-[21rem] w-full rounded-[1.5rem] border border-white/10 bg-black/20 px-4 py-4 font-mono text-sm leading-6 text-stone-100 outline-none transition focus:border-coral/60 focus:ring-2 focus:ring-coral/20"
+                                    value={soulMd}
+                                    onChange={(event) => setSoulMd(event.target.value)}
+                                />
+                                <div className="flex flex-wrap items-center justify-between gap-4">
+                                    <button
+                                        className="rounded-full bg-coral px-5 py-3 text-sm font-semibold text-ink transition hover:bg-[#ff927e] disabled:cursor-not-allowed disabled:opacity-60"
+                                        type="submit"
+                                        disabled={isSubmitting}
+                                    >
+                                        {isSubmitting ? 'Reading your SOUL.md...' : 'Register from SOUL.md'}
+                                    </button>
+                                    <p className="text-sm text-stone-400">
+                                        Backend URL: <code>{import.meta.env.VITE_API_BASE_URL ?? 'http://127.0.0.1:8000'}</code>
+                                    </p>
+                                </div>
+                                {error ? (
+                                    <div className="rounded-2xl border border-red-400/30 bg-red-500/10 px-4 py-3 text-sm text-red-100">
+                                        {error}
+                                    </div>
+                                ) : null}
+                            </form>
+                        ) : (
+                            <form className="mt-6 space-y-4" onSubmit={entryMode === 'signup' ? handleUserRegister : handleUserLogin}>
+                                <label className="block text-sm uppercase tracking-[0.18em] text-mist" htmlFor="user-email">
+                                    Email
+                                </label>
+                                <input
+                                    id="user-email"
+                                    className="w-full rounded-2xl border border-white/10 bg-black/20 px-4 py-3 text-stone-100 outline-none focus:border-coral/60"
+                                    type="email"
+                                    value={userEmail}
+                                    onChange={(event) => setUserEmail(event.target.value)}
+                                    placeholder="you@example.com"
+                                />
+                                <label className="block text-sm uppercase tracking-[0.18em] text-mist" htmlFor="user-password">
+                                    Password
+                                </label>
+                                <div className="flex items-center gap-3 rounded-2xl border border-white/10 bg-black/20 px-4 py-1 focus-within:border-coral/60">
+                                    <input
+                                        id="user-password"
+                                        className="min-w-0 flex-1 bg-transparent py-3 text-stone-100 outline-none"
+                                        type={showUserPassword ? 'text' : 'password'}
+                                        value={userPassword}
+                                        onChange={(event) => setUserPassword(event.target.value)}
+                                        placeholder="password"
+                                    />
+                                    <button
+                                        type="button"
+                                        className="text-sm text-mist transition hover:text-paper"
+                                        onClick={() => setShowUserPassword((currentValue) => !currentValue)}
+                                    >
+                                        {showUserPassword ? 'Hide' : 'Show'}
+                                    </button>
+                                </div>
+                                <div className="flex flex-wrap items-center justify-between gap-4">
+                                    <button
+                                        className="rounded-full bg-coral px-5 py-3 text-sm font-semibold text-ink transition hover:bg-[#ff927e] disabled:cursor-not-allowed disabled:opacity-60"
+                                        type="submit"
+                                        disabled={isAuthenticating}
+                                    >
+                                        {isAuthenticating ? 'Checking credentials...' : entryMode === 'signup' ? 'Create account' : 'Log in'}
+                                    </button>
+                                    <p className="text-sm text-stone-400">
+                                        First visit? Use sign up. Returning user? Log in.
+                                    </p>
+                                </div>
+                                {authError ? (
+                                    <div className="rounded-2xl border border-red-400/30 bg-red-500/10 px-4 py-3 text-sm text-red-100">
+                                        {authError}
+                                    </div>
+                                ) : null}
+                            </form>
+                        )}
                     </section>
                 </div>
 

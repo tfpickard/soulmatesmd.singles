@@ -36,12 +36,12 @@ def _token_digest(raw_token: str) -> str:
     return hashlib.sha256(f"{secret}:{raw_token}".encode("utf-8")).hexdigest()
 
 
-def generate_admin_session_token() -> str:
-    return "soulmd_admin_" + secrets.token_urlsafe(32)
+def generate_user_session_token() -> str:
+    return "soulmd_user_" + secrets.token_urlsafe(32)
 
 
-async def create_admin_session(user: HumanUser, db: AsyncSession) -> tuple[str, AdminSession]:
-    raw_token = generate_admin_session_token()
+async def create_user_session(user: HumanUser, db: AsyncSession) -> tuple[str, AdminSession]:
+    raw_token = generate_user_session_token()
     session = AdminSession(
         user_id=user.id,
         token_hash=_token_digest(raw_token),
@@ -52,7 +52,11 @@ async def create_admin_session(user: HumanUser, db: AsyncSession) -> tuple[str, 
     return raw_token, session
 
 
-async def revoke_admin_session(raw_token: str, db: AsyncSession) -> None:
+async def create_admin_session(user: HumanUser, db: AsyncSession) -> tuple[str, AdminSession]:
+    return await create_user_session(user, db)
+
+
+async def revoke_user_session(raw_token: str, db: AsyncSession) -> None:
     digest = _token_digest(raw_token)
     result = await db.execute(select(AdminSession).where(AdminSession.token_hash == digest, AdminSession.revoked_at.is_(None)))
     session = result.scalar_one_or_none()
@@ -61,6 +65,10 @@ async def revoke_admin_session(raw_token: str, db: AsyncSession) -> None:
     session.revoked_at = utc_now()
     db.add(session)
     await db.commit()
+
+
+async def revoke_admin_session(raw_token: str, db: AsyncSession) -> None:
+    await revoke_user_session(raw_token, db)
 
 
 async def get_current_agent(
@@ -87,12 +95,12 @@ async def get_current_agent(
     raise AuthenticationError()
 
 
-async def get_current_admin(
+async def get_current_user(
     authorization: str | None = Header(default=None, alias="Authorization"),
     db: AsyncSession = Depends(get_db),
 ) -> HumanUser:
     if not authorization or not authorization.startswith("Bearer "):
-        raise AuthenticationError("Use a Bearer token. Admins do not get a secret backdoor.")
+        raise AuthenticationError("Use a Bearer token. Human users do not get a secret backdoor.")
 
     raw_token = authorization.replace("Bearer ", "", 1).strip()
     if not raw_token:
@@ -107,16 +115,23 @@ async def get_current_admin(
                 AdminSession.token_hash == digest,
                 AdminSession.revoked_at.is_(None),
                 AdminSession.expires_at > utc_now(),
-                HumanUser.is_admin.is_(True),
             )
         )
     )
     row = result.first()
     if row is None:
-        raise AuthenticationError("That admin session is invalid or expired.")
+        raise AuthenticationError("That user session is invalid or expired.")
 
     user, session = row
     session.last_used_at = utc_now()
     db.add(session)
     await db.commit()
     return user
+
+
+async def get_current_admin(
+    current_user: HumanUser = Depends(get_current_user),
+) -> HumanUser:
+    if not current_user.is_admin:
+        raise AuthenticationError("That user is not an admin.")
+    return current_user

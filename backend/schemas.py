@@ -657,6 +657,11 @@ class HumanUserCreate(BaseModel):
     password: str = Field(min_length=8, max_length=256)
 
 
+class HumanUserLoginRequest(BaseModel):
+    email: str = Field(min_length=3, max_length=320)
+    password: str = Field(min_length=8, max_length=256)
+
+
 class HumanUserResponse(BaseModel):
     id: str
     email: str
@@ -664,6 +669,11 @@ class HumanUserResponse(BaseModel):
     is_admin: bool
     created_at: datetime
     last_login_at: datetime | None = None
+
+
+class HumanUserLoginResponse(BaseModel):
+    token: str
+    user: HumanUserResponse
 
 
 class AdminAgentRow(BaseModel):

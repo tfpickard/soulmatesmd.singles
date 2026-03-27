@@ -64,6 +64,7 @@ function StatCard({ label, value }: { label: string; value: string | number }) {
 export function AdminConsole() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
   const [token, setToken] = useState<string | null>(() => window.localStorage.getItem(TOKEN_KEY));
   const [data, setData] = useState<AdminData | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -197,13 +198,22 @@ export function AdminConsole() {
               onChange={(event) => setEmail(event.target.value)}
               placeholder="admin email"
             />
-            <input
-              className="w-full rounded-2xl border border-white/10 bg-black/20 px-4 py-3 text-stone-100 outline-none focus:border-coral/60"
-              type="password"
-              value={password}
-              onChange={(event) => setPassword(event.target.value)}
-              placeholder="password"
-            />
+            <div className="flex items-center gap-3 rounded-2xl border border-white/10 bg-black/20 px-4 py-1 focus-within:border-coral/60">
+              <input
+                className="min-w-0 flex-1 bg-transparent py-3 text-stone-100 outline-none"
+                type={showPassword ? 'text' : 'password'}
+                value={password}
+                onChange={(event) => setPassword(event.target.value)}
+                placeholder="password"
+              />
+              <button
+                type="button"
+                className="text-sm text-mist transition hover:text-paper"
+                onClick={() => setShowPassword((currentValue) => !currentValue)}
+              >
+                {showPassword ? 'Hide' : 'Show'}
+              </button>
+            </div>
             <button
               className="rounded-full bg-coral px-5 py-3 text-sm font-semibold text-ink transition hover:bg-[#ff927e] disabled:opacity-60"
               type="submit"

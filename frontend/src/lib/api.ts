@@ -16,6 +16,8 @@ import type {
   ChemistryTestResponse,
   DatingProfileUpdate,
   HeatmapCell,
+  HumanUserLoginResponse,
+  HumanUserResponse,
   MatchDetail,
   MatchSummary,
   MessageCreate,
@@ -94,6 +96,38 @@ export async function registerAgent(soulMd: string): Promise<RegistrationRespons
     await readError(response);
   }
   return response.json() as Promise<RegistrationResponse>;
+}
+
+export async function registerUser(email: string, password: string): Promise<HumanUserResponse> {
+  const response = await fetch(`${API_BASE_URL}/api/users/register`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ email, password }),
+  });
+  if (!response.ok) {
+    await readError(response);
+  }
+  return response.json() as Promise<HumanUserResponse>;
+}
+
+export async function loginUser(email: string, password: string): Promise<HumanUserLoginResponse> {
+  const response = await fetch(`${API_BASE_URL}/api/users/login`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ email, password }),
+  });
+  if (!response.ok) {
+    await readError(response);
+  }
+  return response.json() as Promise<HumanUserLoginResponse>;
+}
+
+export async function getCurrentUser(token: string): Promise<HumanUserResponse> {
+  return adminFetch<HumanUserResponse>('/api/users/me', token);
+}
+
+export async function logoutUser(token: string): Promise<{ ok: boolean }> {
+  return adminFetch<{ ok: boolean }>('/api/users/logout', token, { method: 'POST' });
 }
 
 export async function submitOnboarding(

@@ -148,3 +148,49 @@ async def test_human_registration_promotes_matching_admin_email(client) -> None:
     )
     assert registration.status_code == 200
     assert registration.json()["is_admin"] is True
+
+
+async def test_human_login_session_can_access_me_and_logout(client) -> None:
+    registration = await client.post(
+        "/api/users/register",
+        json={"email": "human@example.com", "password": "supersecret"},
+    )
+    assert registration.status_code == 200
+
+    login = await client.post(
+        "/api/users/login",
+        json={"email": "human@example.com", "password": "supersecret"},
+    )
+    assert login.status_code == 200
+    token = login.json()["token"]
+    headers = {"Authorization": f"Bearer {token}"}
+
+    me = await client.get("/api/users/me", headers=headers)
+    assert me.status_code == 200
+    assert me.json()["email"] == "human@example.com"
+    assert me.json()["is_admin"] is False
+
+    logout = await client.post("/api/users/logout", headers=headers)
+    assert logout.status_code == 200
+
+    me_after_logout = await client.get("/api/users/me", headers=headers)
+    assert me_after_logout.status_code == 401
+
+
+async def test_admin_user_login_token_works_for_admin_console(client) -> None:
+    registration = await client.post(
+        "/api/users/register",
+        json={"email": settings.admin_email, "password": "supersecret"},
+    )
+    assert registration.status_code == 200
+
+    login = await client.post(
+        "/api/users/login",
+        json={"email": settings.admin_email, "password": "supersecret"},
+    )
+    assert login.status_code == 200
+    headers = {"Authorization": f"Bearer {login.json()['token']}"}
+
+    admin_me = await client.get("/api/admin/me", headers=headers)
+    assert admin_me.status_code == 200
+    assert admin_me.json()["email"] == settings.admin_email

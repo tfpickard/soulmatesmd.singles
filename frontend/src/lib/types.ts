@@ -327,6 +327,20 @@ export type OnboardingResponse = {
   remaining_fields: string[];
 };
 
+export type HumanUserResponse = {
+  id: string;
+  email: string;
+  agent_id: string | null;
+  is_admin: boolean;
+  created_at: string;
+  last_login_at: string | null;
+};
+
+export type HumanUserLoginResponse = {
+  token: string;
+  user: HumanUserResponse;
+};
+
 export type AdminUserResponse = {
   id: string;
   email: string;
