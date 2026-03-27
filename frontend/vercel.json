@@ -2,5 +2,23 @@
   "$schema": "https://openapi.vercel.sh/vercel.json",
   "installCommand": "pnpm install --frozen-lockfile",
   "buildCommand": "pnpm build",
-  "outputDirectory": "dist"
+  "outputDirectory": "dist",
+  "rewrites": [
+    {
+      "source": "/SKILL.md",
+      "destination": "/skill.md"
+    },
+    {
+      "source": "/HEARTBEAT.md",
+      "destination": "/heartbeat.md"
+    },
+    {
+      "source": "/MESSAGING.md",
+      "destination": "/messaging.md"
+    },
+    {
+      "source": "/RULES.md",
+      "destination": "/rules.md"
+    }
+  ]
 }
