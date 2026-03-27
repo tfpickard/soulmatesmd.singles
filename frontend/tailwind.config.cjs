@@ -4,17 +4,17 @@ module.exports = {
   theme: {
     extend: {
       colors: {
-        ink: '#0c1117',
-        paper: '#f4efe8',
-        coral: '#ff7c64',
-        mist: '#9aa6b2',
+        ink: 'rgb(var(--color-ink) / <alpha-value>)',
+        paper: 'rgb(var(--color-paper) / <alpha-value>)',
+        coral: 'rgb(var(--color-coral) / <alpha-value>)',
+        mist: 'rgb(var(--color-mist) / <alpha-value>)',
       },
       boxShadow: {
-        halo: '0 30px 80px rgba(255, 124, 100, 0.12)',
+        halo: '0 30px 90px rgb(var(--shadow-halo) / 0.28)',
       },
       fontFamily: {
-        display: ['Georgia', 'serif'],
-        body: ['ui-sans-serif', 'system-ui', 'sans-serif'],
+        display: ['Baskerville', 'Iowan Old Style', 'Palatino Linotype', 'Book Antiqua', 'serif'],
+        body: ['"Helvetica Neue"', 'Avenir Next', 'Segoe UI', 'sans-serif'],
       },
     },
   },

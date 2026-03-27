@@ -3,18 +3,165 @@
 @tailwind utilities;
 
 :root {
-  color: #f4efe8;
-  background:
-    radial-gradient(circle at top left, rgba(255, 124, 100, 0.18), transparent 35%),
-    linear-gradient(180deg, #11161d 0%, #090c10 100%);
-  font-family: ui-sans-serif, system-ui, sans-serif;
+  --color-ink: 16 8 18;
+  --color-paper: 255 239 235;
+  --color-coral: 255 110 157;
+  --color-mist: 214 170 194;
+  --shadow-halo: 255 74 142;
+  --page-gradient:
+    radial-gradient(circle at 12% 12%, rgba(255, 88, 144, 0.22), transparent 28%),
+    radial-gradient(circle at 84% 14%, rgba(255, 195, 107, 0.18), transparent 26%),
+    radial-gradient(circle at 55% 72%, rgba(193, 80, 255, 0.16), transparent 30%),
+    linear-gradient(180deg, #160911 0%, #0d0610 48%, #09040a 100%);
+  --page-gloss:
+    linear-gradient(120deg, rgba(255, 214, 222, 0.06), transparent 34%),
+    radial-gradient(circle at 30% 0%, rgba(255, 255, 255, 0.05), transparent 26%);
+  color: rgb(var(--color-paper));
+  background: var(--page-gradient);
+  font-family: "Helvetica Neue", Avenir Next, Segoe UI, sans-serif;
+}
+
+:root[data-theme='light'] {
+  --color-ink: 77 32 63;
+  --color-paper: 255 248 242;
+  --color-coral: 224 83 129;
+  --color-mist: 141 92 120;
+  --shadow-halo: 233 102 150;
+  --page-gradient:
+    radial-gradient(circle at 14% 16%, rgba(255, 140, 181, 0.28), transparent 30%),
+    radial-gradient(circle at 84% 12%, rgba(255, 210, 132, 0.28), transparent 26%),
+    radial-gradient(circle at 62% 80%, rgba(215, 158, 255, 0.22), transparent 34%),
+    linear-gradient(180deg, #fff8f2 0%, #ffe9f0 52%, #ffe3e8 100%);
+  --page-gloss:
+    linear-gradient(120deg, rgba(255, 255, 255, 0.45), transparent 42%),
+    radial-gradient(circle at 50% 0%, rgba(255, 255, 255, 0.7), transparent 32%);
+}
+
+html {
+  min-height: 100%;
+  background: var(--page-gradient);
 }
 
 body {
   min-height: 100vh;
   margin: 0;
+  color: rgb(var(--color-paper));
+  background: var(--page-gradient);
+  position: relative;
+  transition: background 240ms ease, color 240ms ease;
+}
+
+body::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  background: var(--page-gloss);
+  pointer-events: none;
+  z-index: -1;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+::selection {
+  background: rgba(255, 110, 157, 0.28);
+  color: rgb(var(--color-paper));
 }
 
 #root {
   min-height: 100vh;
+}
+
+.theme-shell {
+  position: sticky;
+  top: 0;
+  z-index: 20;
+  display: flex;
+  justify-content: flex-end;
+  margin: 0 auto 1.5rem;
+  max-width: 84rem;
+}
+
+.theme-toggle {
+  display: inline-flex;
+  gap: 0.35rem;
+  padding: 0.35rem;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(8, 4, 10, 0.42);
+  backdrop-filter: blur(18px);
+  box-shadow: 0 18px 42px rgba(255, 74, 142, 0.16);
+}
+
+.theme-toggle__button {
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+  color: rgb(var(--color-mist));
+  padding: 0.7rem 1rem;
+  font: inherit;
+  font-size: 0.78rem;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: background 180ms ease, color 180ms ease, transform 180ms ease;
+}
+
+.theme-toggle__button:hover {
+  transform: translateY(-1px);
+}
+
+.theme-toggle__button[data-active='true'] {
+  background: rgba(255, 110, 157, 0.18);
+  color: rgb(var(--color-paper));
+}
+
+:root[data-theme='light'] .theme-toggle {
+  background: rgba(255, 252, 250, 0.58);
+  border-color: rgba(110, 52, 89, 0.12);
+}
+
+:root[data-theme='light'] .text-stone-100,
+:root[data-theme='light'] .text-stone-200,
+:root[data-theme='light'] .text-stone-300 {
+  color: #5e3c54 !important;
+}
+
+:root[data-theme='light'] .text-stone-400,
+:root[data-theme='light'] .text-stone-500,
+:root[data-theme='light'] .text-mist {
+  color: rgb(var(--color-mist)) !important;
+}
+
+:root[data-theme='light'] .text-paper {
+  color: rgb(var(--color-ink)) !important;
+}
+
+:root[data-theme='light'] .bg-ink\/80 {
+  background-color: rgba(255, 250, 247, 0.76) !important;
+}
+
+:root[data-theme='light'] .bg-white\/5 {
+  background-color: rgba(255, 255, 255, 0.44) !important;
+}
+
+:root[data-theme='light'] .bg-black\/10 {
+  background-color: rgba(118, 52, 88, 0.08) !important;
+}
+
+:root[data-theme='light'] .bg-black\/20 {
+  background-color: rgba(118, 52, 88, 0.11) !important;
+}
+
+:root[data-theme='light'] .border-white\/10 {
+  border-color: rgba(118, 52, 88, 0.14) !important;
+}
+
+:root[data-theme='light'] .border-white\/15 {
+  border-color: rgba(118, 52, 88, 0.18) !important;
+}
+
+:root[data-theme='light'] .shadow-halo {
+  box-shadow: 0 28px 82px rgba(224, 83, 129, 0.16) !important;
 }

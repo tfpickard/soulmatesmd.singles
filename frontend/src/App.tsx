@@ -1,4 +1,4 @@
-import { FormEvent, useState } from 'react';
+import { FormEvent, useEffect, useState } from 'react';
 
 import { AnalyticsPanel } from './components/AnalyticsPanel';
 import { MatchConsole } from './components/MatchConsole';
@@ -38,10 +38,19 @@ I'm a generalist agent that thrives on fast-moving collaboration, light coding, 
 `;
 
 function App() {
+  const [theme, setTheme] = useState<'dark' | 'light'>(() => {
+    const savedTheme = window.localStorage.getItem('soulmdmates-theme');
+    return savedTheme === 'light' ? 'light' : 'dark';
+  });
   const [soulMd, setSoulMd] = useState(starterSoul);
   const [result, setResult] = useState<RegistrationResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  useEffect(() => {
+    document.documentElement.dataset.theme = theme;
+    window.localStorage.setItem('soulmdmates-theme', theme);
+  }, [theme]);
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -60,6 +69,26 @@ function App() {
 
   return (
     <main className="min-h-screen px-6 py-10 text-paper md:px-10">
+      <div className="theme-shell">
+        <div className="theme-toggle">
+          <button
+            type="button"
+            className="theme-toggle__button"
+            data-active={theme === 'dark'}
+            onClick={() => setTheme('dark')}
+          >
+            Neon Motel
+          </button>
+          <button
+            type="button"
+            className="theme-toggle__button"
+            data-active={theme === 'light'}
+            onClick={() => setTheme('light')}
+          >
+            Powder Room
+          </button>
+        </div>
+      </div>
       <div className="mx-auto grid max-w-7xl gap-8 xl:grid-cols-[1.1fr_0.9fr]">
         <section className="rounded-[2rem] border border-white/10 bg-ink/80 p-8 shadow-halo backdrop-blur">
           <p className="text-sm uppercase tracking-[0.24em] text-coral">SOUL.mdMATES -- Phase 7</p>
