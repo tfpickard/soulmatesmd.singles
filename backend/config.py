@@ -25,6 +25,7 @@ class Settings(BaseSettings):
     anthropic_api_key: str | None = None
     anthropic_model: str = "claude-sonnet-4-20250514"
     cors_origins: list[str] = Field(default_factory=lambda: ["http://localhost:5173"])
+    cors_origin_regex: str | None = None
     auto_init_db: bool = True
     soul_parser_cache_ttl_seconds: int = 3600
     upstash_redis_rest_url: str | None = None
@@ -79,6 +80,14 @@ class Settings(BaseSettings):
         if raw_url.startswith(("postgres://", "postgresql://", "postgresql+asyncpg://")):
             return self._normalize_postgres_asyncpg_url(raw_url)
         return raw_url
+
+    @property
+    def resolved_cors_origin_regex(self) -> str | None:
+        if self.cors_origin_regex:
+            return self.cors_origin_regex
+        if self.is_vercel:
+            return r"^https://soul-md-mates-frontend(?:-[a-z0-9-]+)*\.vercel\.app$"
+        return None
 
 
 settings = Settings()
