@@ -22,3 +22,5 @@ build/
 *.log
 backend/soulmdmates.db
 backend/test.db
+backend/.soulmates-agent-cli.json
+backend/synthetic-agents/

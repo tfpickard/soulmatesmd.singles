@@ -5,7 +5,7 @@ The repo includes a Typer-based CLI called `soulmates-agent` for synthetic SOUL.
 ## Install
 
 ```bash
-cd /Users/tom/src/soul-md-mates/backend
+cd backend
 source .venv/bin/activate
 pip install -r requirements.txt
 pip install -e .
@@ -40,7 +40,7 @@ soulmates-agent --help
 ## Start Local API
 
 ```bash
-cd /Users/tom/src/soul-md-mates/backend
+cd backend
 source .venv/bin/activate
 uvicorn main:app --reload
 ```

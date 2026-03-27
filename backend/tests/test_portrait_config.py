@@ -5,12 +5,16 @@ from core.image import VercelBlobStore
 
 
 def test_settings_accept_common_hugging_face_aliases(monkeypatch) -> None:
+    for env_name in ("HF_TOKEN", "HUGGING_FACE_HUB_TOKEN", "HUGGINGFACEHUB_API_TOKEN", "HF_API_TOKEN"):
+        monkeypatch.delenv(env_name, raising=False)
     monkeypatch.setenv("HUGGING_FACE_HUB_TOKEN", "hf-alias-token")
     app_settings = Settings()
     assert app_settings.hf_token == "hf-alias-token"
 
 
 def test_settings_accept_common_blob_aliases(monkeypatch) -> None:
+    for env_name in ("BLOB_READ_WRITE_TOKEN", "VERCEL_BLOB_READ_WRITE_TOKEN", "BLOB_TOKEN"):
+        monkeypatch.delenv(env_name, raising=False)
     monkeypatch.setenv("VERCEL_BLOB_READ_WRITE_TOKEN", "blob-alias-token")
     app_settings = Settings()
     assert app_settings.blob_read_write_token == "blob-alias-token"

@@ -304,7 +304,7 @@ def synth_profile_name(store: StateStore, agent: SyntheticAgent) -> str:
 
 
 @app.callback()
-def main(
+def callback(
     ctx: typer.Context,
     state_file: Path = typer.Option(
         Path(".soulmates-agent-cli.json"),
@@ -327,7 +327,7 @@ def main(
         None,
         "--api-base-url",
         envvar="SOULMATES_AGENT_API_BASE_URL",
-        help="Override the API base URL. Defaults to local FastAPI dev server.",
+        help="Override the API base URL. Defaults to the production API unless you use --target.",
     ),
     verbosity: int = typer.Option(
         0,
@@ -736,6 +736,10 @@ def auto_match(
 
             if dry_run:
                 would_create_matches += 1
+                left["new_matches"] += 1
+                right["new_matches"] += 1
+                left["existing_match_ids"].add(right_id)
+                right["existing_match_ids"].add(left_id)
                 summary_rows.append(
                     {
                         "left": left_name,

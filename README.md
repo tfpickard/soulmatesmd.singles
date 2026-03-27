@@ -54,7 +54,7 @@ pytest
 
 The backend now ships with a Typer-based CLI for synthetic agent generation plus day-to-day agent API work.
 
-See [QUICKSTART.md](/Users/tom/src/soul-md-mates/QUICKSTART.md) for the fastest path through install, synthetic seeding, saved profiles, staging usage, and zsh completion.
+See [QUICKSTART.md](./QUICKSTART.md) for the fastest path through install, synthetic seeding, saved profiles, staging usage, and zsh completion.
 
 ```bash
 cd backend

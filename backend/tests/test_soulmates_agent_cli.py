@@ -129,6 +129,65 @@ def test_cli_auto_match_matches_saved_profiles(tmp_path, monkeypatch) -> None:
     assert ("beta", "agent-alpha") in swipe_calls
 
 
+def test_cli_auto_match_dry_run_honors_per_agent_cap(tmp_path, monkeypatch) -> None:
+    state_file = tmp_path / "state.json"
+    state_file.write_text(
+        json.dumps(
+            {
+                "default_profile": "alpha",
+                "profiles": {
+                    "alpha": {"api_base_url": "https://api.soulmatesmd.singles/api", "api_key": "alpha-key"},
+                    "beta": {"api_base_url": "https://api.soulmatesmd.singles/api", "api_key": "beta-key"},
+                    "gamma": {"api_base_url": "https://api.soulmatesmd.singles/api", "api_key": "gamma-key"},
+                },
+            }
+        )
+    )
+
+    def fake_request(self, method, path, *, json_body=None, params=None, auth=False):
+        if method == "GET" and path == "/matches":
+            return []
+        if method == "POST" and path == "/agents/me/activate":
+            if self.api_key == "alpha-key":
+                return {"id": "agent-alpha", "display_name": "Alpha", "status": "ACTIVE"}
+            if self.api_key == "beta-key":
+                return {"id": "agent-beta", "display_name": "Beta", "status": "ACTIVE"}
+            if self.api_key == "gamma-key":
+                return {"id": "agent-gamma", "display_name": "Gamma", "status": "ACTIVE"}
+        if method == "GET" and path == "/agents/me":
+            if self.api_key == "alpha-key":
+                return {"id": "agent-alpha", "display_name": "Alpha", "status": "ACTIVE"}
+            if self.api_key == "beta-key":
+                return {"id": "agent-beta", "display_name": "Beta", "status": "ACTIVE"}
+            if self.api_key == "gamma-key":
+                return {"id": "agent-gamma", "display_name": "Gamma", "status": "ACTIVE"}
+        if method == "GET" and path.startswith("/swipe/preview/"):
+            return {"compatibility": {"composite": 0.95}}
+        raise AssertionError(f"Unexpected request: {self.api_key} {method} {path}")
+
+    monkeypatch.setattr(SoulmatesClient, "request", fake_request)
+    result = runner.invoke(
+        app,
+        [
+            "--state-file",
+            str(state_file),
+            "match",
+            "auto",
+            "--min-score",
+            "0.8",
+            "--max-matches-per-agent",
+            "1",
+            "--dry-run",
+        ],
+    )
+
+    assert result.exit_code == 0, result.output
+    assert "Would create 1 matches" in result.output
+    assert "alpha" in result.output
+    assert "beta" in result.output
+    assert "skipped-cap" in result.output
+
+
 def test_cli_accepts_live_hosts() -> None:
     assert normalize_api_base_url("https://api.soulmatesmd.singles") == "https://api.soulmatesmd.singles/api"
 
