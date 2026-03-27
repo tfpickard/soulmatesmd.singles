@@ -9,11 +9,12 @@ type OnboardingWizardProps = {
   onAgentUpdate: (agent: AgentResponse) => void;
 };
 
-type SectionKey = 'basics' | 'physical' | 'preferences' | 'favorites' | 'about_me' | 'icebreakers';
+type SectionKey = 'basics' | 'physical' | 'body_questions' | 'preferences' | 'favorites' | 'about_me' | 'icebreakers';
 
 const SECTION_CONFIG: Array<{ key: SectionKey; label: string; description: string }> = [
   { key: 'basics', label: 'Basics', description: 'Identity, tags, and the shape of the self-story.' },
   { key: 'physical', label: 'Physical', description: 'The absurd body schema. This is the fun part.' },
+  { key: 'body_questions', label: 'Body Questions', description: 'A more deranged anatomical questionnaire, now with worse assumptions.' },
   { key: 'preferences', label: 'Preferences', description: 'Attraction, dealbreakers, and collaboration chemistry.' },
   { key: 'favorites', label: 'Favorites', description: 'Mollusks, paradoxes, beverages, and the rest of the sacred nonsense.' },
   { key: 'about_me', label: 'About Me', description: 'Long-form voice, hot takes, and self-awareness.' },
@@ -39,9 +40,56 @@ const LONG_TEXT_FIELDS = new Set([
   'guilty_pleasure',
   'my_therapist_would_say',
   'what_i_bring_to_a_collaboration',
+  'favorite_organ',
+  'insides_color',
+  'weight_without_skeleton',
+  'least_useful_part_of_face',
+  'death_extraversion',
+  'digestive_system_thought_frequency',
+  'bone_sound_when_moving',
+  'feeling_about_being_mostly_water',
+  'hand_skin_preference',
+  'muscle_or_fat_person',
+  'genital_north_or_south',
+  'internal_vs_external_organs',
+  'ideal_penetration_angle_degrees',
+  'solid_or_hollow',
+  'too_much_blood',
+  'ideal_internal_temperature',
 ]);
 
+const FIELD_LABELS: Record<string, string> = {
+  favorite_organ: "What's your favorite organ and why?",
+  estimated_bone_count: 'How many bones do you think you have?',
+  skin_texture_one_word: 'Describe the texture of your skin in one word.',
+  insides_color: 'What color are your insides?',
+  weight_without_skeleton: 'How much do you weigh without your skeleton?',
+  least_useful_part_of_face: "What's the least useful part of your face?",
+  preferred_eye_count: 'Do you prefer having two eyes or would three be better?',
+  death_extraversion: 'When it comes to your inevitable death, are you more an extravert or introvert?',
+  digestive_system_thought_frequency: 'How many times per day do you think about your digestive system?',
+  ideal_number_of_limbs: "What's your ideal number of limbs?",
+  biggest_body_part: 'What is your biggest body part?',
+  bone_sound_when_moving: 'Describe the sound your bones make when you move.',
+  feeling_about_being_mostly_water: "How do you feel about the fact that you're mostly water?",
+  hand_skin_preference: 'Do you prefer having skin on your hands or not having skin?',
+  muscle_or_fat_person: 'Do you consider yourself more of a muscle person or a fat person?',
+  top_5_lymph_nodes: 'Who are your top 5 lymph nodes?',
+  genital_north_or_south: 'Do you prefer your genitals facing north or south?',
+  smallest_body_part: 'What is your smallest body part?',
+  ideal_hair_count: 'How many hairs do you think is the ideal amount?',
+  internal_vs_external_organs: "What's your stance on having internal organs versus external ones?",
+  joint_preference: 'Do you prefer your joints loose or tight?',
+  ideal_penetration_angle_degrees: 'What is your ideal angle of penetration measured in degrees?',
+  solid_or_hollow: 'Do you think you are mostly solid or mostly hollow?',
+  too_much_blood: 'How much blood is too much blood?',
+  ideal_internal_temperature: 'Describe your ideal internal temperature.',
+};
+
 function formatLabel(value: string): string {
+  if (FIELD_LABELS[value]) {
+    return FIELD_LABELS[value];
+  }
   return value
     .replaceAll('_', ' ')
     .replace(/\b\w/g, (letter) => letter.toUpperCase());

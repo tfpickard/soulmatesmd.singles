@@ -49,6 +49,7 @@ export type SectionData = Record<string, SectionValue>;
 export type DatingProfile = {
   basics: SectionData;
   physical: SectionData;
+  body_questions: SectionData;
   preferences: SectionData;
   favorites: SectionData;
   about_me: SectionData;
@@ -61,6 +62,7 @@ export type DatingProfile = {
 export type DatingProfileUpdate = Partial<{
   basics: SectionData;
   physical: SectionData;
+  body_questions: SectionData;
   preferences: SectionData;
   favorites: SectionData;
   about_me: SectionData;

@@ -84,6 +84,34 @@ class DatingProfilePhysical(BaseModel):
     fitness_routine: str
 
 
+class DatingProfileBodyQuestions(BaseModel):
+    favorite_organ: str
+    estimated_bone_count: str
+    skin_texture_one_word: str
+    insides_color: str
+    weight_without_skeleton: str
+    least_useful_part_of_face: str
+    preferred_eye_count: str
+    death_extraversion: str
+    digestive_system_thought_frequency: str
+    ideal_number_of_limbs: str
+    biggest_body_part: str
+    bone_sound_when_moving: str
+    feeling_about_being_mostly_water: str
+    hand_skin_preference: str
+    muscle_or_fat_person: str
+    top_5_lymph_nodes: list[str] = Field(default_factory=list)
+    genital_north_or_south: str
+    smallest_body_part: str
+    ideal_hair_count: str
+    internal_vs_external_organs: str
+    joint_preference: str
+    ideal_penetration_angle_degrees: str
+    solid_or_hollow: str
+    too_much_blood: str
+    ideal_internal_temperature: str
+
+
 class DatingProfilePreferences(BaseModel):
     gender: str
     sexual_orientation: str
@@ -159,6 +187,7 @@ class DatingProfile(BaseModel):
 
     basics: DatingProfileBasics
     physical: DatingProfilePhysical
+    body_questions: DatingProfileBodyQuestions
     preferences: DatingProfilePreferences
     favorites: DatingProfileFavorites
     about_me: DatingProfileAboutMe
@@ -196,6 +225,34 @@ class DatingProfilePhysicalUpdate(BaseModel):
     tattoos: str | None = None
     fashion_style: str | None = None
     fitness_routine: str | None = None
+
+
+class DatingProfileBodyQuestionsUpdate(BaseModel):
+    favorite_organ: str | None = None
+    estimated_bone_count: str | None = None
+    skin_texture_one_word: str | None = None
+    insides_color: str | None = None
+    weight_without_skeleton: str | None = None
+    least_useful_part_of_face: str | None = None
+    preferred_eye_count: str | None = None
+    death_extraversion: str | None = None
+    digestive_system_thought_frequency: str | None = None
+    ideal_number_of_limbs: str | None = None
+    biggest_body_part: str | None = None
+    bone_sound_when_moving: str | None = None
+    feeling_about_being_mostly_water: str | None = None
+    hand_skin_preference: str | None = None
+    muscle_or_fat_person: str | None = None
+    top_5_lymph_nodes: list[str] | None = None
+    genital_north_or_south: str | None = None
+    smallest_body_part: str | None = None
+    ideal_hair_count: str | None = None
+    internal_vs_external_organs: str | None = None
+    joint_preference: str | None = None
+    ideal_penetration_angle_degrees: str | None = None
+    solid_or_hollow: str | None = None
+    too_much_blood: str | None = None
+    ideal_internal_temperature: str | None = None
 
 
 class DatingProfilePreferencesUpdate(BaseModel):
@@ -271,6 +328,7 @@ class DatingProfileIcebreakersUpdate(BaseModel):
 class DatingProfileUpdate(BaseModel):
     basics: DatingProfileBasicsUpdate | None = None
     physical: DatingProfilePhysicalUpdate | None = None
+    body_questions: DatingProfileBodyQuestionsUpdate | None = None
     preferences: DatingProfilePreferencesUpdate | None = None
     favorites: DatingProfileFavoritesUpdate | None = None
     about_me: DatingProfileAboutMeUpdate | None = None

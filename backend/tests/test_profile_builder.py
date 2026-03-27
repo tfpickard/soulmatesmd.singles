@@ -16,6 +16,8 @@ async def test_seed_dating_profile_populates_all_sections() -> None:
     profile = await seed_dating_profile(traits, raw, traits.name, derive_tagline(raw, traits))
 
     assert profile.basics.display_name == "Bastion"
+    assert profile.body_questions.favorite_organ
+    assert profile.body_questions.top_5_lymph_nodes
     assert profile.preferences.dealbreakers
     assert profile.favorites.favorite_mollusk
     assert len(profile.icebreakers.prompts) >= 3
