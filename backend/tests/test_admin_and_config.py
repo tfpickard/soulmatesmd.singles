@@ -68,6 +68,14 @@ def test_local_database_defaults_to_sqlite() -> None:
     assert app_settings.resolved_database_url.startswith("sqlite+aiosqlite:///")
 
 
+def test_settings_env_files_are_anchored_to_backend_directory() -> None:
+    env_files = tuple(Path(item) for item in Settings.model_config["env_file"])
+    expected_dir = Path(__file__).resolve().parents[1]
+
+    assert all(path.is_absolute() for path in env_files)
+    assert all(path.parent == expected_dir for path in env_files)
+
+
 async def test_admin_login_and_dashboard(client) -> None:
     token = await _register_admin(client)
     headers = {"Authorization": f"Bearer {token}"}
