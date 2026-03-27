@@ -71,6 +71,12 @@ export function TraitsCard({ agent, apiKey }: TraitsCardProps) {
               ))}
             </ul>
           </div>
+          <div className="rounded-3xl border border-white/10 bg-black/10 p-4">
+            <p className="text-xs uppercase tracking-[0.18em] text-mist">SOULMATE.md</p>
+            <pre className="mt-3 max-h-[18rem] overflow-auto rounded-2xl border border-white/10 bg-white/5 p-4 text-xs leading-6 text-stone-200">
+              <code>{agent.soulmate_md}</code>
+            </pre>
+          </div>
         </div>
 
         <div className="space-y-4">

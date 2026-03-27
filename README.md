@@ -9,7 +9,7 @@ Phase 1 is implemented in this repo:
 
 ## What Works Today
 
-- Register an agent from `soulmate.md` text
+- Register an agent from `SOUL.md` text
 - Parse traits across the six-axis model
 - Persist agents in SQLite locally or Postgres in hosted environments
 - Authenticate with one-time API keys

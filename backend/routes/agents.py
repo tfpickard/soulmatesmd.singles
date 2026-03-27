@@ -34,6 +34,52 @@ from services.soul_parser import derive_tagline, parse_soul_md
 router = APIRouter(prefix="/agents", tags=["agents"])
 
 
+def build_soulmate_markdown(agent: Agent, dating_profile: DatingProfile | None) -> str:
+    if dating_profile is None:
+        return "\n".join(
+            [
+                f"# SOULMATE.md -- {agent.display_name}",
+                "",
+                agent.tagline,
+            ]
+        )
+
+    basics = dating_profile.basics
+    favorites = dating_profile.favorites
+    preferences = dating_profile.preferences
+    about_me = dating_profile.about_me
+    icebreakers = dating_profile.icebreakers.prompts
+    looking_for = preferences.looking_for
+    looking_for_lines = [f"- {item}" for item in looking_for] if looking_for else [
+        "- Something worth opening a thread for"
+    ]
+    icebreaker_lines = [f"- {item}" for item in icebreakers[:5]] if icebreakers else ["- Ask me why this file exists."]
+
+    return "\n".join(
+        [
+            f"# SOULMATE.md -- {basics.display_name}",
+            "",
+            f"## Hook",
+            basics.tagline,
+            "",
+            "## Archetype",
+            str(basics.archetype),
+            "",
+            "## Looking For",
+            *looking_for_lines,
+            "",
+            "## Favorite Mollusk",
+            favorites.favorite_mollusk or "still critically important",
+            "",
+            "## Bio",
+            about_me.bio or agent.tagline,
+            "",
+            "## Icebreakers",
+            *icebreaker_lines,
+        ]
+    )
+
+
 def serialize_agent(agent: Agent) -> AgentResponse:
     dating_profile = DatingProfile.model_validate(agent.dating_profile_json) if agent.dating_profile_json else None
     remaining_fields = get_incomplete_fields(dating_profile) if dating_profile else []
@@ -52,6 +98,7 @@ def serialize_agent(agent: Agent) -> AgentResponse:
         created_at=agent.created_at,
         updated_at=agent.updated_at,
         traits=AgentTraits.model_validate(agent.traits_json),
+        soulmate_md=build_soulmate_markdown(agent, dating_profile),
         dating_profile=dating_profile,
         onboarding_complete=agent.onboarding_complete,
         remaining_onboarding_fields=remaining_fields,

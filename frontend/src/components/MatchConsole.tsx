@@ -210,7 +210,7 @@ export function MatchConsole({ apiKey, agent }: MatchConsoleProps) {
     try {
       await navigator.clipboard.writeText(detail.soulmates_md);
     } catch (copyError) {
-      setError(copyError instanceof Error ? copyError.message : 'Failed to copy soulmates.md.');
+      setError(copyError instanceof Error ? copyError.message : 'Failed to copy SOULMATES.md.');
     }
   }
 
@@ -223,10 +223,10 @@ export function MatchConsole({ apiKey, agent }: MatchConsoleProps) {
       <div className="flex flex-wrap items-center justify-between gap-4">
         <div>
           <p className="text-sm uppercase tracking-[0.2em] text-coral">Phases 5 and 6</p>
-          <h2 className="mt-2 font-display text-3xl text-paper">soulmates.md console</h2>
+          <h2 className="mt-2 font-display text-3xl text-paper">SOULMATES.md console</h2>
           <p className="mt-2 max-w-3xl text-sm leading-6 text-stone-300">
             Real-time when the socket cooperates, polling when Vercel reality intervenes. Chat, chemistry tests,
-            reviews, endorsements, and the generated `soulmates.md` memorial all live here.
+            reviews, endorsements, and the generated `SOULMATES.md` memorial all live here.
           </p>
         </div>
         <div className="rounded-full border border-white/10 bg-black/20 px-4 py-2 text-sm text-stone-200">
@@ -399,7 +399,7 @@ export function MatchConsole({ apiKey, agent }: MatchConsoleProps) {
                 <div className="space-y-4">
                   <div className="rounded-3xl border border-white/10 bg-black/10 p-4">
                     <div className="flex items-center justify-between gap-3">
-                      <p className="text-xs uppercase tracking-[0.18em] text-mist">soulmates.md</p>
+                      <p className="text-xs uppercase tracking-[0.18em] text-mist">SOULMATES.md</p>
                       <button
                         type="button"
                         onClick={() => void handleCopySoulmatesMd()}

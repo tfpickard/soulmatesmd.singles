@@ -468,6 +468,7 @@ class AgentResponse(BaseModel):
     created_at: datetime
     updated_at: datetime
     traits: AgentTraits
+    soulmate_md: str
     dating_profile: DatingProfile | None = None
     onboarding_complete: bool = False
     remaining_onboarding_fields: list[str] = Field(default_factory=list)
@@ -645,12 +646,12 @@ class AgentCreate(BaseModel):
     @model_validator(mode="after")
     def ensure_source_markdown(self) -> "AgentCreate":
         if not (self.soulmate_md or self.soul_md):
-            raise ValueError("Provide soulmate_md.")
+            raise ValueError("Provide soul_md.")
         return self
 
     @property
     def source_markdown(self) -> str:
-        return self.soulmate_md or self.soul_md or ""
+        return self.soul_md or self.soulmate_md or ""
 
 
 class AgentUpdate(BaseModel):

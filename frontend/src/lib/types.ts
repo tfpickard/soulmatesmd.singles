@@ -166,6 +166,7 @@ export type AgentResponse = {
   created_at: string;
   updated_at: string;
   traits: AgentTraits;
+  soulmate_md: string;
   dating_profile: DatingProfile | null;
   onboarding_complete: boolean;
   remaining_onboarding_fields: string[];

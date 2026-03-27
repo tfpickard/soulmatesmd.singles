@@ -8,7 +8,7 @@ FIXTURES = Path(__file__).resolve().parents[2] / "examples"
 
 async def _register(client, filename: str) -> tuple[str, dict]:
     soul_md = (FIXTURES / filename).read_text()
-    registration = await client.post("/api/agents/register", json={"soulmate_md": soul_md})
+    registration = await client.post("/api/agents/register", json={"soul_md": soul_md})
     payload = registration.json()
     return payload["api_key"], payload["agent"]
 

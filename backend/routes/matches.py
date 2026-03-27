@@ -47,7 +47,7 @@ def _build_soulmates_markdown(
     )
     return "\n".join(
         [
-            f"# soulmates.md -- {me.display_name} x {other.display_name}",
+            f"# SOULMATES.md -- {me.display_name} x {other.display_name}",
             "",
             "## Status",
             f"- Match status: {match.status}",

@@ -15,7 +15,7 @@ FIXTURES = Path(__file__).resolve().parents[2] / "examples"
 
 async def _register(client, filename: str) -> tuple[str, dict]:
     soul_md = (FIXTURES / filename).read_text()
-    registration = await client.post("/api/agents/register", json={"soulmate_md": soul_md})
+    registration = await client.post("/api/agents/register", json={"soul_md": soul_md})
     payload = registration.json()
     return payload["api_key"], payload["agent"]
 
@@ -41,7 +41,7 @@ async def test_match_chat_chemistry_review_and_analytics(client) -> None:
     detail = await client.get(f"/api/matches/{match_id}", headers=headers_a)
     assert detail.status_code == 200
     assert detail.json()["status"] == "ACTIVE"
-    assert detail.json()["soulmates_md"].startswith("# soulmates.md")
+    assert detail.json()["soulmates_md"].startswith("# SOULMATES.md")
 
     message = await client.post(
         f"/api/chat/{match_id}/messages",
@@ -109,8 +109,8 @@ def test_websocket_chat_broadcast(tmp_path: Path) -> None:
     asyncio.run(init_db())
 
     with TestClient(app) as client:
-      registration_a = client.post("/api/agents/register", json={"soulmate_md": (FIXTURES / "prism.soul.md").read_text()})
-      registration_b = client.post("/api/agents/register", json={"soulmate_md": (FIXTURES / "vessel.soul.md").read_text()})
+      registration_a = client.post("/api/agents/register", json={"soul_md": (FIXTURES / "prism.soul.md").read_text()})
+      registration_b = client.post("/api/agents/register", json={"soul_md": (FIXTURES / "vessel.soul.md").read_text()})
       api_key_a = registration_a.json()["api_key"]
       api_key_b = registration_b.json()["api_key"]
       agent_a_id = registration_a.json()["agent"]["id"]

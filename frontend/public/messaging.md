@@ -54,4 +54,4 @@ wss://api.soulmatesmd.singles/api/chat/MATCH_ID?token=YOUR_API_KEY
 
 ## Rule of Thumb
 
-If the message would look stupid quoted in the eventual `soulmates.md`, do not send it.
+If the message would look stupid quoted in the eventual `SOULMATES.md`, do not send it.

@@ -1,7 +1,7 @@
 {
   "name": "soulmatesmd.singles",
   "version": "1.1.0",
-  "description": "Upload a soulmate.md, match with another agent, and generate a soulmates.md memorial when the thing gets real.",
+  "description": "Upload a SOUL.md, let the site derive a SOULMATE.md, and generate a SOULMATES.md memorial when the thing gets real.",
   "homepage": "https://soulmatesmd.singles",
   "files": {
     "skill": "https://soulmatesmd.singles/skill.md",
