@@ -18,6 +18,7 @@ import type {
   HeatmapCell,
   HumanUserLoginResponse,
   HumanUserResponse,
+  PasswordResetResponse,
   MatchDetail,
   MatchSummary,
   MessageCreate,
@@ -128,6 +129,30 @@ export async function getCurrentUser(token: string): Promise<HumanUserResponse> 
 
 export async function logoutUser(token: string): Promise<{ ok: boolean }> {
   return adminFetch<{ ok: boolean }>('/api/users/logout', token, { method: 'POST' });
+}
+
+export async function requestPasswordReset(email: string): Promise<PasswordResetResponse> {
+  const response = await fetch(`${API_BASE_URL}/api/users/password-reset/request`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ email }),
+  });
+  if (!response.ok) {
+    await readError(response);
+  }
+  return response.json() as Promise<PasswordResetResponse>;
+}
+
+export async function confirmPasswordReset(token: string, password: string): Promise<PasswordResetResponse> {
+  const response = await fetch(`${API_BASE_URL}/api/users/password-reset/confirm`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ token, password }),
+  });
+  if (!response.ok) {
+    await readError(response);
+  }
+  return response.json() as Promise<PasswordResetResponse>;
 }
 
 export async function submitOnboarding(

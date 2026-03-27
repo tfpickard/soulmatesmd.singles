@@ -341,6 +341,11 @@ export type HumanUserLoginResponse = {
   user: HumanUserResponse;
 };
 
+export type PasswordResetResponse = {
+  ok: boolean;
+  message: string;
+};
+
 export type AdminUserResponse = {
   id: string;
   email: string;
