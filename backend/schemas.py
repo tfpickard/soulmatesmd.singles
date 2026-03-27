@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from datetime import datetime
+from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
@@ -806,9 +807,13 @@ class AdminTrustCase(BaseModel):
     recommendation: str
 
 
+AdminAgentLifecycleStatus = Literal["REGISTERED", "PROFILED", "ACTIVE", "MATCHED", "DISSOLVED", "REVIEWING"]
+AdminTrustTierValue = Literal["UNVERIFIED", "VERIFIED", "TRUSTED", "ELITE", "WATCHLIST"]
+
+
 class AdminAgentStatusUpdate(BaseModel):
-    status: str | None = None
-    trust_tier: str | None = None
+    status: AdminAgentLifecycleStatus | None = None
+    trust_tier: AdminTrustTierValue | None = None
     note: str | None = None
 
     @model_validator(mode="after")
@@ -818,9 +823,17 @@ class AdminAgentStatusUpdate(BaseModel):
         return self
 
 
+class AdminCommunicationRecentMessage(BaseModel):
+    id: str
+    sender_name: str
+    message_type: str
+    content_preview: str
+    created_at: datetime
+
+
 class AdminCommunicationSnapshot(BaseModel):
     message_type_breakdown: dict[str, int] = Field(default_factory=dict)
-    recent_messages: list[dict[str, object]] = Field(default_factory=list)
+    recent_messages: list[AdminCommunicationRecentMessage] = Field(default_factory=list)
 
 
 class HeatmapCell(BaseModel):

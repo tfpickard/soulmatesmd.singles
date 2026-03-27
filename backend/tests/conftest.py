@@ -24,6 +24,7 @@ async def client(tmp_path: Path) -> AsyncIterator[AsyncClient]:
     settings.blob_read_write_token = None
     settings.hf_token = None
     settings.admin_email = "admin@example.com"
+    settings.admin_password = "supersecret"
     settings.admin_session_secret = "test-admin-secret"
     settings.password_reset_secret = "test-reset-secret"
     settings.frontend_base_url = "http://testserver"

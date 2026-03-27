@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from sqlalchemy import case, func, select
+from sqlalchemy import and_, case, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from config import settings
@@ -8,6 +8,7 @@ from models import Agent, ChemistryTest, HumanUser, Match, Message
 from schemas import (
     AdminAlert,
     AdminCommunicationSnapshot,
+    AdminCommunicationRecentMessage,
     AdminCommandCenter,
     AdminMatchingLab,
     AdminMatchingPair,
@@ -26,6 +27,12 @@ DEFAULT_MATCHING_WEIGHTS = AdminMatchingWeights(
     tool_synergy=0.08,
     vibe_bonus=0.12,
 )
+
+LOW_REPUTATION_THRESHOLD = 2.5
+LOW_REPUTATION_MIN_COLLABORATIONS = 1
+TRUST_STATUS_RISK_STATUSES = {"DISSOLVED"}
+
+
 def serialize_admin_user(user: HumanUser) -> AdminUserResponse:
     return AdminUserResponse(
         id=user.id,
@@ -90,7 +97,7 @@ async def build_command_center(db: AsyncSession) -> AdminCommandCenter:
             AdminAlert(
                 level="warning",
                 title="Unread message backlog",
-                detail=f"{unread_messages} messages are unread across active matches.",
+                detail=f"{unread_messages} messages are currently unread.",
             )
         )
     if total_agents and active_agents / total_agents < 0.4:
@@ -140,9 +147,18 @@ async def build_matching_lab(db: AsyncSession, weights: AdminMatchingWeights | N
         .all()
     )
 
-    names = {agent_id: name for _, name, agent_id in rows}
-    agent_b_rows = (await db.execute(select(Agent.id, Agent.display_name))).all()
-    names.update({agent_id: name for agent_id, name in agent_b_rows})
+    agent_ids: set[str] = set()
+    for match, _, agent_a_id in rows:
+        if agent_a_id is not None:
+            agent_ids.add(agent_a_id)
+        if match.agent_b_id is not None:
+            agent_ids.add(match.agent_b_id)
+    name_rows = (
+        (await db.execute(select(Agent.id, Agent.display_name).where(Agent.id.in_(agent_ids)))).all()
+        if agent_ids
+        else []
+    )
+    names = {agent_id: display_name for agent_id, display_name in name_rows}
 
     pairs: list[AdminMatchingPair] = []
     for match, _, _ in rows:
@@ -161,7 +177,7 @@ async def build_matching_lab(db: AsyncSession, weights: AdminMatchingWeights | N
             )
         )
 
-    top_pairs = sorted(pairs, key=lambda item: item.live_score, reverse=True)[:8]
+    top_pairs = sorted(pairs, key=lambda item: item.simulated_score, reverse=True)[:8]
     volatile_pairs = sorted(pairs, key=lambda item: abs(item.delta), reverse=True)[:8]
 
     return AdminMatchingLab(weights=active_weights, top_pairs=top_pairs, volatile_pairs=volatile_pairs)
@@ -170,13 +186,30 @@ async def build_matching_lab(db: AsyncSession, weights: AdminMatchingWeights | N
 async def build_trust_cases(db: AsyncSession) -> list[AdminTrustCase]:
     risk_score = (
         case((Agent.ghosting_incidents > 0, Agent.ghosting_incidents * 20), else_=0)
-        + case((Agent.reputation_score < 2.5, 25), else_=0)
-        + case((Agent.status == "UNMATCHED", 10), else_=0)
+        + case(
+            (
+                and_(
+                    Agent.total_collaborations >= LOW_REPUTATION_MIN_COLLABORATIONS,
+                    Agent.reputation_score < LOW_REPUTATION_THRESHOLD,
+                ),
+                25,
+            ),
+            else_=0,
+        )
+        + case((Agent.status.in_(TRUST_STATUS_RISK_STATUSES), 10), else_=0)
     )
     rows = (
         (
             await db.execute(
-                select(Agent.id, Agent.display_name, Agent.ghosting_incidents, Agent.reputation_score, Agent.status, risk_score)
+                select(
+                    Agent.id,
+                    Agent.display_name,
+                    Agent.ghosting_incidents,
+                    Agent.reputation_score,
+                    Agent.total_collaborations,
+                    Agent.status,
+                    risk_score,
+                )
                 .order_by(risk_score.desc(), Agent.updated_at.desc())
                 .limit(25)
             )
@@ -191,12 +224,31 @@ async def build_trust_cases(db: AsyncSession) -> list[AdminTrustCase]:
             reputation_score=round(float(reputation_score or 0.0), 2),
             ghosting_incidents=ghosting_incidents,
             risk_score=int(score or 0),
-            recommendation=(
-                "Reach out and trigger a chemistry test" if ghosting_incidents > 0 else "No intervention needed"
+            recommendation=_trust_case_recommendation(
+                ghosting_incidents=ghosting_incidents,
+                reputation_score=float(reputation_score or 0.0),
+                total_collaborations=total_collaborations,
+                status=status,
             ),
         )
-        for agent_id, display_name, ghosting_incidents, reputation_score, status, score in rows
+        for agent_id, display_name, ghosting_incidents, reputation_score, total_collaborations, status, score in rows
     ]
+
+
+def _trust_case_recommendation(
+    *,
+    ghosting_incidents: int,
+    reputation_score: float,
+    total_collaborations: int,
+    status: str,
+) -> str:
+    if ghosting_incidents > 0:
+        return "Reach out and trigger a chemistry test"
+    if total_collaborations >= LOW_REPUTATION_MIN_COLLABORATIONS and reputation_score < LOW_REPUTATION_THRESHOLD:
+        return "Monitor: low reputation score"
+    if status in TRUST_STATUS_RISK_STATUSES:
+        return "Review recent dissolution activity"
+    return "No intervention needed"
 
 
 async def build_communication_snapshot(db: AsyncSession) -> AdminCommunicationSnapshot:
@@ -215,13 +267,13 @@ async def build_communication_snapshot(db: AsyncSession) -> AdminCommunicationSn
     return AdminCommunicationSnapshot(
         message_type_breakdown={message_type: count for message_type, count in distribution},
         recent_messages=[
-            {
-                "id": message.id,
-                "sender_name": sender_name,
-                "message_type": message.message_type,
-                "content_preview": (message.content[:140] + "...") if len(message.content) > 140 else message.content,
-                "created_at": message.created_at.isoformat(),
-            }
+            AdminCommunicationRecentMessage(
+                id=message.id,
+                sender_name=sender_name,
+                message_type=message.message_type,
+                content_preview=(message.content[:140] + "...") if len(message.content) > 140 else message.content,
+                created_at=message.created_at,
+            )
             for message, sender_name in recent
         ],
     )

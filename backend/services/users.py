@@ -32,6 +32,16 @@ def synthetic_agent_email(agent_id: str) -> str:
     return f"agent-{agent_id}@agents.soulmatesmd.singles"
 
 
+def _is_valid_admin_claim(email: str, password: str) -> bool:
+    if not is_admin_email(email):
+        return False
+    if not settings.admin_password:
+        raise AuthenticationError("Admin registration is disabled until ADMIN_PASSWORD is configured.")
+    if not secrets.compare_digest(password, settings.admin_password):
+        raise AuthenticationError("Use the configured admin password to claim the admin account.")
+    return True
+
+
 def _password_reset_digest(raw_token: str) -> str:
     secret = settings.effective_password_reset_secret
     return hashlib.sha256(f"{secret}:{raw_token}".encode("utf-8")).hexdigest()
@@ -54,11 +64,12 @@ async def create_human_user(
         if existing_agent_user is not None:
             raise UserConflict("That agent already has a linked human user.")
 
+    is_admin = _is_valid_admin_claim(normalized_email, password)
     user = HumanUser(
         email=normalized_email,
         password_hash=hash_api_key(password),
         agent_id=agent_id,
-        is_admin=is_admin_email(normalized_email),
+        is_admin=is_admin,
     )
     db.add(user)
     await db.flush()

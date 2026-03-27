@@ -5,6 +5,8 @@ from pathlib import Path
 from urllib.parse import parse_qs, urlparse
 
 from config import Settings, settings
+from database import get_sessionmaker
+from models import Agent
 
 
 FIXTURES = Path(__file__).resolve().parents[2] / "examples"
@@ -145,10 +147,19 @@ async def test_admin_activity_includes_registration_and_match(client) -> None:
 async def test_human_registration_promotes_matching_admin_email(client) -> None:
     registration = await client.post(
         "/api/users/register",
-        json={"email": settings.admin_email, "password": "supersecret"},
+        json={"email": settings.admin_email, "password": settings.admin_password},
     )
     assert registration.status_code == 200
     assert registration.json()["is_admin"] is True
+
+
+async def test_human_registration_rejects_admin_email_without_configured_password(client) -> None:
+    registration = await client.post(
+        "/api/users/register",
+        json={"email": settings.admin_email, "password": "totally-wrong-password"},
+    )
+    assert registration.status_code == 401
+    assert "configured admin password" in registration.json()["error"]["message"]
 
 
 async def test_human_login_session_can_access_me_and_logout(client) -> None:
@@ -181,7 +192,7 @@ async def test_human_login_session_can_access_me_and_logout(client) -> None:
 async def test_admin_user_login_token_works_for_admin_console(client) -> None:
     registration = await client.post(
         "/api/users/register",
-        json={"email": settings.admin_email, "password": "supersecret"},
+        json={"email": settings.admin_email, "password": settings.admin_password},
     )
     assert registration.status_code == 200
 
@@ -195,6 +206,41 @@ async def test_admin_user_login_token_works_for_admin_console(client) -> None:
     admin_me = await client.get("/api/admin/me", headers=headers)
     assert admin_me.status_code == 200
     assert admin_me.json()["email"] == settings.admin_email
+
+
+async def test_trust_cases_ignore_fresh_default_reputation_but_flag_real_risk(client) -> None:
+    _, neutral_agent = await _register(client, "prism.soul.md")
+    _, low_rep_agent = await _register(client, "meridian.soul.md")
+    _, dissolved_agent = await _register(client, "bastion.soul.md")
+
+    async with get_sessionmaker()() as db:
+        neutral = await db.get(Agent, neutral_agent["id"])
+        assert neutral is not None
+        neutral.status = "ACTIVE"
+
+        low_rep = await db.get(Agent, low_rep_agent["id"])
+        assert low_rep is not None
+        low_rep.status = "ACTIVE"
+        low_rep.total_collaborations = 2
+        low_rep.reputation_score = 1.8
+
+        dissolved = await db.get(Agent, dissolved_agent["id"])
+        assert dissolved is not None
+        dissolved.status = "DISSOLVED"
+
+        await db.commit()
+
+    headers = {"Authorization": f"Bearer {await _register_admin(client)}"}
+    trust = await client.get("/api/admin/trust-cases", headers=headers)
+    assert trust.status_code == 200
+
+    cases = {item["agent_id"]: item for item in trust.json()}
+    assert cases[neutral_agent["id"]]["risk_score"] == 0
+    assert cases[neutral_agent["id"]]["recommendation"] == "No intervention needed"
+    assert cases[low_rep_agent["id"]]["risk_score"] == 25
+    assert cases[low_rep_agent["id"]]["recommendation"] == "Monitor: low reputation score"
+    assert cases[dissolved_agent["id"]]["risk_score"] == 10
+    assert cases[dissolved_agent["id"]]["recommendation"] == "Review recent dissolution activity"
 
 
 async def test_password_reset_request_and_confirm(client, monkeypatch) -> None:

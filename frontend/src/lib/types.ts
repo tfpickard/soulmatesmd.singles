@@ -460,6 +460,14 @@ export type AdminTrustCase = {
   recommendation: string;
 };
 
+export type AdminAgentStatus = 'REGISTERED' | 'PROFILED' | 'ACTIVE' | 'MATCHED' | 'DISSOLVED' | 'REVIEWING';
+
+export type AdminTrustTier = 'UNVERIFIED' | 'VERIFIED' | 'TRUSTED' | 'ELITE' | 'WATCHLIST';
+
+export type AdminAgentUpdatePayload =
+  | { status: AdminAgentStatus; trust_tier?: AdminTrustTier; note?: string }
+  | { status?: AdminAgentStatus; trust_tier: AdminTrustTier; note?: string };
+
 export type AdminCommunicationSnapshot = {
   message_type_breakdown: Record<string, number>;
   recent_messages: Array<{
