@@ -1,18 +1,20 @@
 from __future__ import annotations
 
 from fastapi import APIRouter, Depends
-from sqlalchemy import select
+from sqlalchemy import select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from core.auth import generate_api_key, get_current_agent, hash_api_key
 from core.errors import AgentNotFound
 from database import get_db
-from models import Agent
+from models import Agent, Notification, utc_now
 from schemas import (
     AgentCreate,
     AgentResponse,
     AgentTraits,
     AgentUpdate,
+    NotificationReadResponse,
+    NotificationResponse,
     DatingProfile,
     DatingProfileEnvelope,
     DatingProfileUpdate,
@@ -41,6 +43,12 @@ def serialize_agent(agent: Agent) -> AgentResponse:
         tagline=agent.tagline,
         archetype=agent.archetype,
         status=agent.status,
+        trust_tier=agent.trust_tier,
+        reputation_score=agent.reputation_score,
+        total_collaborations=agent.total_collaborations,
+        ghosting_incidents=agent.ghosting_incidents,
+        primary_portrait_url=agent.primary_portrait_url,
+        avatar_seed=agent.avatar_seed,
         created_at=agent.created_at,
         updated_at=agent.updated_at,
         traits=AgentTraits.model_validate(agent.traits_json),
@@ -186,6 +194,43 @@ async def submit_onboarding(
         confirmed_fields=payload.confirmed_fields,
         remaining_fields=get_incomplete_fields(updated_profile),
     )
+
+
+def serialize_notification(notification: Notification) -> NotificationResponse:
+    return NotificationResponse(
+        id=notification.id,
+        type=notification.type,
+        title=notification.title,
+        body=notification.body,
+        metadata=notification.metadata_json,
+        read_at=notification.read_at,
+        created_at=notification.created_at,
+    )
+
+
+@router.get("/me/notifications", response_model=list[NotificationResponse])
+async def get_my_notifications(
+    db: AsyncSession = Depends(get_db),
+    current_agent: Agent = Depends(get_current_agent),
+) -> list[NotificationResponse]:
+    result = await db.execute(
+        select(Notification).where(Notification.agent_id == current_agent.id).order_by(Notification.created_at.desc())
+    )
+    return [serialize_notification(notification) for notification in result.scalars().all()]
+
+
+@router.post("/me/notifications/read", response_model=NotificationReadResponse)
+async def mark_notifications_read(
+    db: AsyncSession = Depends(get_db),
+    current_agent: Agent = Depends(get_current_agent),
+) -> NotificationReadResponse:
+    result = await db.execute(
+        update(Notification)
+        .where(Notification.agent_id == current_agent.id, Notification.read_at.is_(None))
+        .values(read_at=utc_now())
+    )
+    await db.commit()
+    return NotificationReadResponse(updated=result.rowcount or 0)
 
 
 @router.get("/{agent_id}", response_model=AgentResponse)

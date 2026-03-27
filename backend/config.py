@@ -28,6 +28,12 @@ class Settings(BaseSettings):
     cors_origin_regex: str | None = None
     auto_init_db: bool = True
     soul_parser_cache_ttl_seconds: int = 3600
+    swipe_queue_size: int = 20
+    superlike_daily_limit: int = 3
+    undo_daily_limit: int = 1
+    chemistry_test_timeout_seconds: int = 300
+    portrait_max_regenerations: int = 3
+    portrait_gallery_max: int = 6
     upstash_redis_rest_url: str | None = None
     upstash_redis_rest_token: str | None = None
     redis_url: str | None = None

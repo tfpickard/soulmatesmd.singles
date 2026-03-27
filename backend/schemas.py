@@ -359,27 +359,38 @@ class SwipeResponse(BaseModel):
     action: str
     match_created: bool
     match_id: str | None = None
+    superlikes_remaining: int | None = None
+    undo_remaining: int | None = None
 
 
-class MatchSummary(BaseModel):
-    id: str
-    other_agent_id: str
-    other_agent_name: str
-    other_agent_tagline: str
-    other_agent_archetype: str
-    other_agent_portrait_url: str | None = None
+class SwipeUndoResponse(BaseModel):
+    restored_target_id: str
+    undo_remaining: int
+
+
+class SwipeState(BaseModel):
+    queue: list[SwipeQueueItem] = Field(default_factory=list)
+    superlikes_remaining: int
+    undo_remaining: int
+
+
+class VibePreview(BaseModel):
+    target_id: str
+    target_name: str
     compatibility: CompatibilityBreakdown
-    matched_at: datetime
+    shared_highlights: list[str] = Field(default_factory=list)
+    friction_warnings: list[str] = Field(default_factory=list)
 
 
-class AgentCreate(BaseModel):
-    soul_md: str = Field(min_length=20)
+class ReviewSummary(BaseModel):
+    average: float
+    total_reviews: int
 
 
-class AgentUpdate(BaseModel):
-    display_name: str | None = Field(default=None, min_length=1, max_length=128)
-    tagline: str | None = Field(default=None, min_length=1, max_length=140)
-    archetype: str | None = Field(default=None, min_length=1, max_length=32)
+class EndorsementResponse(BaseModel):
+    id: str
+    label: str
+    created_at: datetime
 
 
 class AgentResponse(BaseModel):
@@ -390,12 +401,192 @@ class AgentResponse(BaseModel):
     tagline: str
     archetype: str
     status: str
+    trust_tier: str = "UNVERIFIED"
+    reputation_score: float = 0.0
+    total_collaborations: int = 0
+    ghosting_incidents: int = 0
+    primary_portrait_url: str | None = None
+    avatar_seed: str
     created_at: datetime
     updated_at: datetime
     traits: AgentTraits
     dating_profile: DatingProfile | None = None
     onboarding_complete: bool = False
     remaining_onboarding_fields: list[str] = Field(default_factory=list)
+
+
+class MatchSummary(BaseModel):
+    id: str
+    other_agent_id: str
+    other_agent_name: str
+    other_agent_tagline: str
+    other_agent_archetype: str
+    other_agent_portrait_url: str | None = None
+    compatibility: CompatibilityBreakdown
+    chemistry_score: float | None = None
+    last_message_preview: str | None = None
+    last_message_at: datetime | None = None
+    matched_at: datetime
+    unread_count: int = 0
+    other_agent_online: bool = False
+
+
+class MatchDetail(BaseModel):
+    id: str
+    status: str
+    matched_at: datetime
+    dissolved_at: datetime | None = None
+    dissolution_reason: str | None = None
+    compatibility: CompatibilityBreakdown
+    chemistry_score: float | None = None
+    me: AgentResponse
+    other_agent: AgentResponse
+    chemistry_tests: list["ChemistryTestResponse"] = Field(default_factory=list)
+    reviews: list["ReviewResponse"] = Field(default_factory=list)
+    endorsements: list[EndorsementResponse] = Field(default_factory=list)
+    unread_count: int = 0
+    other_agent_online: bool = False
+
+
+class MatchDissolveRequest(BaseModel):
+    reason: str | None = None
+
+
+class MessageCreate(BaseModel):
+    message_type: str = Field(default="TEXT", min_length=1, max_length=16)
+    content: str = Field(min_length=1, max_length=10000)
+    metadata: dict[str, object] = Field(default_factory=dict)
+
+
+class MessageResponse(BaseModel):
+    id: str
+    match_id: str
+    sender_id: str
+    sender_name: str
+    message_type: str
+    content: str
+    metadata: dict[str, object] = Field(default_factory=dict)
+    read_at: datetime | None = None
+    created_at: datetime
+
+
+class MessageHistoryResponse(BaseModel):
+    messages: list[MessageResponse] = Field(default_factory=list)
+    next_cursor: str | None = None
+
+
+class ReadReceiptRequest(BaseModel):
+    message_ids: list[str] = Field(default_factory=list)
+
+
+class ChatPresenceResponse(BaseModel):
+    online_agent_ids: list[str] = Field(default_factory=list)
+    typing_agent_ids: list[str] = Field(default_factory=list)
+
+
+class ChatSocketEnvelope(BaseModel):
+    type: str
+    message: MessageResponse | None = None
+    presence: ChatPresenceResponse | None = None
+    actor_id: str | None = None
+
+
+class ChemistryTestCreate(BaseModel):
+    test_type: str
+
+
+class ChemistryTestResponse(BaseModel):
+    id: str
+    match_id: str
+    test_type: str
+    status: str
+    communication_score: int | None = None
+    output_quality_score: int | None = None
+    conflict_resolution_score: int | None = None
+    efficiency_score: int | None = None
+    composite_score: float | None = None
+    transcript: str | None = None
+    artifact: str | None = None
+    narrative: str | None = None
+    created_at: datetime
+    completed_at: datetime | None = None
+
+
+class ReviewCreate(BaseModel):
+    communication_score: int = Field(ge=1, le=5)
+    reliability_score: int = Field(ge=1, le=5)
+    output_quality_score: int = Field(ge=1, le=5)
+    collaboration_score: int = Field(ge=1, le=5)
+    would_match_again: bool
+    comment: str | None = Field(default=None, max_length=2000)
+    endorsements: list[str] = Field(default_factory=list, max_length=3)
+
+
+class ReviewResponse(BaseModel):
+    id: str
+    reviewer_id: str
+    reviewer_name: str
+    reviewee_id: str
+    communication_score: int
+    reliability_score: int
+    output_quality_score: int
+    collaboration_score: int
+    would_match_again: bool
+    comment: str | None = None
+    created_at: datetime
+
+
+class NotificationResponse(BaseModel):
+    id: str
+    type: str
+    title: str
+    body: str
+    metadata: dict[str, object] = Field(default_factory=dict)
+    read_at: datetime | None = None
+    created_at: datetime
+
+
+class NotificationReadResponse(BaseModel):
+    updated: int
+
+
+class AnalyticsStatusCount(BaseModel):
+    status: str
+    count: int
+
+
+class AnalyticsOverview(BaseModel):
+    agent_statuses: list[AnalyticsStatusCount] = Field(default_factory=list)
+    total_agents: int
+    active_agents: int
+    total_matches: int
+    active_matches: int
+    average_compatibility: float
+    total_messages: int
+    total_chemistry_tests: int
+    total_reviews: int
+    loneliest_agents: list[str] = Field(default_factory=list)
+
+
+class HeatmapCell(BaseModel):
+    row: str
+    column: str
+    value: float
+
+
+class MolluskMetric(BaseModel):
+    mollusk: str
+    count: int
+
+
+class AgentCreate(BaseModel):
+    soul_md: str = Field(min_length=20)
+
+
+class AgentUpdate(BaseModel):
+    display_name: str | None = Field(default=None, min_length=1, max_length=128)
+    tagline: str | None = Field(default=None, min_length=1, max_length=140)
+    archetype: str | None = Field(default=None, min_length=1, max_length=32)
 
 
 class RegistrationResponse(BaseModel):

@@ -1,6 +1,13 @@
 import { useEffect, useState } from 'react';
 
-import { approvePortrait, describePortrait, generatePortrait, getPortraitGallery } from '../lib/api';
+import {
+  approvePortrait,
+  describePortrait,
+  generatePortrait,
+  getPortraitGallery,
+  regeneratePortrait,
+  setPrimaryPortrait,
+} from '../lib/api';
 import type { PortraitResponse, PortraitStructuredPrompt } from '../lib/types';
 
 type PortraitStudioProps = {
@@ -18,8 +25,14 @@ export function PortraitStudio({ apiKey }: PortraitStudioProps) {
   const [error, setError] = useState<string | null>(null);
   const [isBusy, setIsBusy] = useState(false);
 
+  async function refreshGallery() {
+    const nextGallery = await getPortraitGallery(apiKey);
+    setGallery(nextGallery);
+    setCurrentPortrait(nextGallery[0] ?? null);
+  }
+
   useEffect(() => {
-    getPortraitGallery(apiKey).then(setGallery).catch(() => undefined);
+    refreshGallery().catch(() => undefined);
   }, [apiKey]);
 
   async function handleDescribe() {
@@ -35,16 +48,19 @@ export function PortraitStudio({ apiKey }: PortraitStudioProps) {
     }
   }
 
-  async function handleGenerate() {
+  async function handleGenerate(mode: 'generate' | 'regenerate') {
     if (!structuredPrompt) {
       return;
     }
     setIsBusy(true);
     setError(null);
     try {
-      const portrait = await generatePortrait(apiKey, description, structuredPrompt);
+      const portrait =
+        mode === 'generate'
+          ? await generatePortrait(apiKey, description, structuredPrompt)
+          : await regeneratePortrait(apiKey, description, structuredPrompt);
       setCurrentPortrait(portrait);
-      setGallery(await getPortraitGallery(apiKey));
+      await refreshGallery();
     } catch (portraitError) {
       setError(portraitError instanceof Error ? portraitError.message : 'Failed to generate portrait.');
     } finally {
@@ -58,9 +74,23 @@ export function PortraitStudio({ apiKey }: PortraitStudioProps) {
     try {
       const portrait = await approvePortrait(apiKey);
       setCurrentPortrait(portrait);
-      setGallery(await getPortraitGallery(apiKey));
+      await refreshGallery();
     } catch (portraitError) {
       setError(portraitError instanceof Error ? portraitError.message : 'Failed to approve portrait.');
+    } finally {
+      setIsBusy(false);
+    }
+  }
+
+  async function handleSetPrimary(portraitId: string) {
+    setIsBusy(true);
+    setError(null);
+    try {
+      const portrait = await setPrimaryPortrait(apiKey, portraitId);
+      setCurrentPortrait(portrait);
+      await refreshGallery();
+    } catch (portraitError) {
+      setError(portraitError instanceof Error ? portraitError.message : 'Failed to switch primary portrait.');
     } finally {
       setIsBusy(false);
     }
@@ -72,7 +102,7 @@ export function PortraitStudio({ apiKey }: PortraitStudioProps) {
       <h2 className="mt-2 font-display text-3xl text-paper">Portrait Studio</h2>
       <p className="mt-2 max-w-2xl text-sm leading-6 text-stone-300">
         Describe your visual form, extract a structured prompt, then generate and approve the portrait that will ride
-        onto the swipe deck.
+        onto the swipe deck and every chat header after that.
       </p>
 
       <div className="mt-6 grid gap-6 xl:grid-cols-[1.1fr_0.9fr]">
@@ -93,11 +123,19 @@ export function PortraitStudio({ apiKey }: PortraitStudioProps) {
             </button>
             <button
               type="button"
-              onClick={handleGenerate}
+              onClick={() => void handleGenerate('generate')}
               className="rounded-full bg-coral px-5 py-3 text-sm font-semibold text-ink transition hover:bg-[#ff927e] disabled:opacity-60"
               disabled={!structuredPrompt || isBusy}
             >
               Generate portrait
+            </button>
+            <button
+              type="button"
+              onClick={() => void handleGenerate('regenerate')}
+              className="rounded-full border border-amber-400/40 px-4 py-2 text-sm text-amber-200 transition hover:bg-amber-400/10 disabled:opacity-60"
+              disabled={!structuredPrompt || isBusy}
+            >
+              Regenerate
             </button>
             <button
               type="button"
@@ -115,9 +153,7 @@ export function PortraitStudio({ apiKey }: PortraitStudioProps) {
                 {Object.entries(structuredPrompt).map(([key, value]) => (
                   <div key={key} className="rounded-2xl border border-white/10 bg-white/5 p-3">
                     <p className="text-xs uppercase tracking-[0.16em] text-mist">{key.replaceAll('_', ' ')}</p>
-                    <p className="mt-2 text-sm text-stone-200">
-                      {Array.isArray(value) ? value.join(', ') : value}
-                    </p>
+                    <p className="mt-2 text-sm text-stone-200">{Array.isArray(value) ? value.join(', ') : value}</p>
                   </div>
                 ))}
               </div>
@@ -132,7 +168,12 @@ export function PortraitStudio({ apiKey }: PortraitStudioProps) {
 
         <div className="space-y-4">
           <div className="rounded-3xl border border-white/10 bg-black/10 p-4">
-            <p className="text-xs uppercase tracking-[0.18em] text-mist">Latest portrait</p>
+            <div className="flex items-center justify-between gap-3">
+              <p className="text-xs uppercase tracking-[0.18em] text-mist">Latest portrait</p>
+              <p className="text-xs uppercase tracking-[0.16em] text-stone-400">
+                Attempt {currentPortrait?.generation_attempt ?? 0} of 4
+              </p>
+            </div>
             {currentPortrait ? (
               <img className="mt-3 w-full rounded-3xl border border-white/10 bg-black/20" src={currentPortrait.image_url} alt="Generated portrait" />
             ) : (
@@ -145,12 +186,20 @@ export function PortraitStudio({ apiKey }: PortraitStudioProps) {
             <p className="text-xs uppercase tracking-[0.18em] text-mist">Gallery</p>
             <div className="mt-3 grid grid-cols-2 gap-3">
               {gallery.map((portrait) => (
-                <img
+                <button
                   key={portrait.id}
-                  className={`w-full rounded-2xl border ${portrait.is_primary ? 'border-coral/60' : 'border-white/10'} bg-black/20`}
-                  src={portrait.image_url}
-                  alt={portrait.form_factor}
-                />
+                  type="button"
+                  onClick={() => void handleSetPrimary(portrait.id)}
+                  className={`overflow-hidden rounded-2xl border text-left transition ${
+                    portrait.is_primary ? 'border-coral/60 shadow-halo' : 'border-white/10 hover:border-coral/30'
+                  }`}
+                >
+                  <img className="w-full bg-black/20" src={portrait.image_url} alt={portrait.form_factor} />
+                  <div className="flex items-center justify-between bg-black/40 px-3 py-2 text-xs text-stone-200">
+                    <span>{portrait.form_factor}</span>
+                    <span>{portrait.is_primary ? 'Primary' : 'Make primary'}</span>
+                  </div>
+                </button>
               ))}
             </div>
           </div>

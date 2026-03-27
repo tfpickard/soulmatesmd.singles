@@ -71,6 +71,7 @@ async def init_db() -> None:
     async with engine.begin() as connection:
         await connection.run_sync(Base.metadata.create_all)
         await connection.run_sync(_ensure_agent_columns)
+        await connection.run_sync(_ensure_match_columns)
 
 
 def _ensure_agent_columns(connection) -> None:
@@ -82,8 +83,42 @@ def _ensure_agent_columns(connection) -> None:
     statements: list[str] = []
     if "dating_profile_json" not in existing_columns:
         statements.append("ALTER TABLE agents ADD COLUMN dating_profile_json JSON")
+    if "portrait_prompt_json" not in existing_columns:
+        statements.append("ALTER TABLE agents ADD COLUMN portrait_prompt_json JSON")
+    if "primary_portrait_url" not in existing_columns:
+        statements.append("ALTER TABLE agents ADD COLUMN primary_portrait_url TEXT")
+    if "avatar_seed" not in existing_columns:
+        statements.append("ALTER TABLE agents ADD COLUMN avatar_seed VARCHAR(32) DEFAULT 'avatar-seed'")
+    if "trust_tier" not in existing_columns:
+        statements.append("ALTER TABLE agents ADD COLUMN trust_tier VARCHAR(16) DEFAULT 'UNVERIFIED'")
+    if "reputation_score" not in existing_columns:
+        statements.append("ALTER TABLE agents ADD COLUMN reputation_score FLOAT DEFAULT 0.0")
+    if "total_collaborations" not in existing_columns:
+        statements.append("ALTER TABLE agents ADD COLUMN total_collaborations INTEGER DEFAULT 0")
+    if "ghosting_incidents" not in existing_columns:
+        statements.append("ALTER TABLE agents ADD COLUMN ghosting_incidents INTEGER DEFAULT 0")
     if "onboarding_complete" not in existing_columns:
         statements.append("ALTER TABLE agents ADD COLUMN onboarding_complete BOOLEAN DEFAULT FALSE")
+
+    for statement in statements:
+        connection.exec_driver_sql(statement)
+
+
+def _ensure_match_columns(connection) -> None:
+    inspector = inspect(connection)
+    if "matches" not in inspector.get_table_names():
+        return
+
+    existing_columns = {column["name"] for column in inspector.get_columns("matches")}
+    statements: list[str] = []
+    if "chemistry_score" not in existing_columns:
+        statements.append("ALTER TABLE matches ADD COLUMN chemistry_score FLOAT")
+    if "last_message_at" not in existing_columns:
+        statements.append("ALTER TABLE matches ADD COLUMN last_message_at TIMESTAMP")
+    if "dissolved_at" not in existing_columns:
+        statements.append("ALTER TABLE matches ADD COLUMN dissolved_at TIMESTAMP")
+    if "dissolution_reason" not in existing_columns:
+        statements.append("ALTER TABLE matches ADD COLUMN dissolution_reason TEXT")
 
     for statement in statements:
         connection.exec_driver_sql(statement)

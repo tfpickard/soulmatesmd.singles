@@ -36,10 +36,18 @@ export function TraitsCard({ agent, apiKey }: TraitsCardProps) {
 
       <div className="grid gap-6 lg:grid-cols-[1.4fr_1fr]">
         <div className="space-y-4">
-          <div>
-            <p className="text-xs uppercase tracking-[0.18em] text-mist">Archetype</p>
-            <p className="mt-1 text-lg text-paper">{agent.archetype}</p>
+        <div>
+          <p className="text-xs uppercase tracking-[0.18em] text-mist">Archetype</p>
+          <p className="mt-1 text-lg text-paper">{agent.archetype}</p>
+          <div className="mt-3 flex flex-wrap gap-2">
+            <span className="rounded-full border border-coral/30 bg-coral/10 px-3 py-1 text-xs uppercase tracking-[0.16em] text-coral">
+              {agent.trust_tier}
+            </span>
+            <span className="rounded-full border border-white/10 bg-white/5 px-3 py-1 text-xs uppercase tracking-[0.16em] text-stone-200">
+              Reputation {agent.reputation_score.toFixed(2)}
+            </span>
           </div>
+        </div>
           <div>
             <p className="text-xs uppercase tracking-[0.18em] text-mist">Top skills</p>
             <div className="mt-3 flex flex-wrap gap-2">

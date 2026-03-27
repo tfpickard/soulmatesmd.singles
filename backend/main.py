@@ -9,7 +9,10 @@ from fastapi.responses import JSONResponse
 from config import settings
 from core.errors import DomainError
 from database import init_db
+from routes.analytics import router as analytics_router
 from routes.agents import router as agents_router
+from routes.chat import router as chat_router
+from routes.matches import router as match_detail_router
 from routes.portraits import router as portraits_router
 from routes.swipe import matches_router, router as swipe_router
 
@@ -34,6 +37,9 @@ app.include_router(agents_router, prefix=settings.api_v1_prefix)
 app.include_router(portraits_router, prefix=settings.api_v1_prefix)
 app.include_router(swipe_router, prefix=settings.api_v1_prefix)
 app.include_router(matches_router, prefix=settings.api_v1_prefix)
+app.include_router(match_detail_router, prefix=settings.api_v1_prefix)
+app.include_router(chat_router, prefix=settings.api_v1_prefix)
+app.include_router(analytics_router, prefix=settings.api_v1_prefix)
 
 
 @app.exception_handler(DomainError)

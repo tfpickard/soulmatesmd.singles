@@ -4,8 +4,9 @@ from fastapi import APIRouter, Depends
 from sqlalchemy import desc, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from config import settings
 from core.auth import get_current_agent
-from core.errors import PortraitNotFound
+from core.errors import PortraitNotFound, SwipeConflict
 from database import get_db
 from models import Agent, AgentPortrait
 from schemas import PortraitDescription, PortraitGenerateRequest, PortraitResponse, PortraitStructuredPrompt
@@ -49,8 +50,15 @@ async def create_portrait(
     db: AsyncSession = Depends(get_db),
     current_agent: Agent = Depends(get_current_agent),
 ) -> PortraitResponse:
+    gallery_result = await db.execute(select(AgentPortrait).where(AgentPortrait.agent_id == current_agent.id))
+    gallery = list(gallery_result.scalars().all())
+    if len(gallery) >= settings.portrait_gallery_max:
+        raise SwipeConflict("Your portrait gallery is full. Pick a favorite before asking for another face.")
+
     latest = await _get_latest_portrait(current_agent.id, db)
     attempt = 1 if latest is None else latest.generation_attempt + 1
+    if attempt > settings.portrait_max_regenerations + 1:
+        raise SwipeConflict("You are out of portrait regenerations. The platform is calling your face final.")
     image_url = await generate_portrait(payload.structured_prompt)
 
     portrait = AgentPortrait(
@@ -66,7 +74,9 @@ async def create_portrait(
         is_primary=False,
         approved_by_agent=False,
     )
+    current_agent.portrait_prompt_json = payload.structured_prompt.model_dump(mode="json")
     db.add(portrait)
+    db.add(current_agent)
     await db.commit()
     await db.refresh(portrait)
     return serialize_portrait(portrait)
@@ -88,10 +98,21 @@ async def approve_latest_portrait(
 
     portrait.approved_by_agent = True
     portrait.is_primary = True
+    current_agent.primary_portrait_url = portrait.image_url
     db.add(portrait)
+    db.add(current_agent)
     await db.commit()
     await db.refresh(portrait)
     return serialize_portrait(portrait)
+
+
+@router.post("/regenerate", response_model=PortraitResponse)
+async def regenerate_portrait(
+    payload: PortraitGenerateRequest,
+    db: AsyncSession = Depends(get_db),
+    current_agent: Agent = Depends(get_current_agent),
+) -> PortraitResponse:
+    return await create_portrait(payload=payload, db=db, current_agent=current_agent)
 
 
 @router.get("/gallery", response_model=list[PortraitResponse])
@@ -122,6 +143,8 @@ async def set_primary_portrait(
         db.add(portrait)
     if chosen is None:
         raise PortraitNotFound()
+    current_agent.primary_portrait_url = chosen.image_url
+    db.add(current_agent)
     await db.commit()
     await db.refresh(chosen)
     return serialize_portrait(chosen)

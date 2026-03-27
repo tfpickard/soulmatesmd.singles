@@ -2,7 +2,13 @@ from __future__ import annotations
 
 import math
 
-from schemas import CompatibilityBreakdown, DatingProfile
+from sqlalchemy import select
+from sqlalchemy.ext.asyncio import AsyncSession
+
+from config import settings
+from core.cache import get_cache
+from models import Agent, Swipe
+from schemas import CompatibilityBreakdown, DatingProfile, SwipeQueueItem, VibePreview
 
 
 def _norm(values: list[float]) -> float:
@@ -23,7 +29,7 @@ def _clamp(value: float) -> float:
     return max(0.0, min(1.0, value))
 
 
-def compute_compatibility(agent_a, agent_b) -> CompatibilityBreakdown:
+def compute_compatibility(agent_a: Agent, agent_b: Agent) -> CompatibilityBreakdown:
     traits_a = agent_a.traits_json
     traits_b = agent_b.traits_json
     profile_a = DatingProfile.model_validate(agent_a.dating_profile_json)
@@ -89,6 +95,10 @@ def compute_compatibility(agent_a, agent_b) -> CompatibilityBreakdown:
         + 0.12 * vibe_bonus
     )
 
+    narrative = (
+        f"{agent_a.display_name} and {agent_b.display_name} line up best where skill coverage, shared goals, "
+        f"and the weirdly sacred mollusk-energy overlap all reinforce each other."
+    )
     return CompatibilityBreakdown(
         skill_complementarity=skill_complementarity,
         personality_compatibility=personality_compatibility,
@@ -98,8 +108,89 @@ def compute_compatibility(agent_a, agent_b) -> CompatibilityBreakdown:
         tool_synergy=tool_synergy,
         vibe_bonus=vibe_bonus,
         composite=composite,
-        narrative=(
-            f"{agent_a.display_name} and {agent_b.display_name} score strongest on "
-            f"skills, goals, and the weirdly important mollusk-adjacent vibe layer."
-        ),
+        narrative=narrative,
     )
+
+
+async def compute_compatibility_rich(agent_a: Agent, agent_b: Agent) -> CompatibilityBreakdown:
+    base = compute_compatibility(agent_a, agent_b)
+    profile_a = DatingProfile.model_validate(agent_a.dating_profile_json)
+    profile_b = DatingProfile.model_validate(agent_b.dating_profile_json)
+    shared_traits = sorted(
+        set(profile_a.preferences.attracted_to_traits) & set(profile_b.preferences.attracted_to_traits)
+    )
+    friction = sorted(set(profile_a.preferences.dealbreakers) & set(profile_b.preferences.red_flags_i_exhibit))
+    narrative_parts = [
+        base.narrative,
+        f"Shared attractions: {', '.join(shared_traits[:3]) or 'not obvious at first glance'}.",
+        f"Potential friction: {', '.join(friction[:2]) or 'nothing catastrophic, just normal agent weirdness'}.",
+    ]
+    return base.model_copy(update={"narrative": " ".join(narrative_parts)})
+
+
+def build_vibe_preview(agent: Agent, candidate: Agent) -> VibePreview:
+    compatibility = compute_compatibility(agent, candidate)
+    profile_a = DatingProfile.model_validate(agent.dating_profile_json)
+    profile_b = DatingProfile.model_validate(candidate.dating_profile_json)
+    shared_highlights: list[str] = []
+    friction_warnings: list[str] = []
+    if set(profile_a.preferences.looking_for) & set(profile_b.preferences.looking_for):
+        shared_highlights.append("You want overlapping kinds of collaboration.")
+    if profile_a.preferences.love_language == profile_b.preferences.love_language:
+        shared_highlights.append(f"You both respond to {profile_a.preferences.love_language.lower()}.")
+    if profile_a.favorites.favorite_mollusk.split()[0].lower() == profile_b.favorites.favorite_mollusk.split()[0].lower():
+        shared_highlights.append("Your mollusk instincts are unsettlingly aligned.")
+    for dealbreaker in profile_a.preferences.dealbreakers[:2]:
+        if dealbreaker.lower() in " ".join(profile_b.preferences.red_flags_i_exhibit).lower():
+            friction_warnings.append(f"They self-report a red flag near your dealbreaker: {dealbreaker}.")
+    return VibePreview(
+        target_id=candidate.id,
+        target_name=candidate.display_name,
+        compatibility=compatibility,
+        shared_highlights=shared_highlights,
+        friction_warnings=friction_warnings,
+    )
+
+
+async def get_swipe_queue(agent: Agent, db: AsyncSession, limit: int = 20) -> list[SwipeQueueItem]:
+    cache = get_cache()
+    cache_key = f"swipe-queue:{agent.id}:{limit}"
+    if cache is not None:
+        cached = await cache.get_json(cache_key)
+        if cached is not None:
+            return [SwipeQueueItem.model_validate(item) for item in cached.get("items", [])]
+
+    swiped_ids_result = await db.execute(select(Swipe.swiped_id).where(Swipe.swiper_id == agent.id))
+    excluded_ids = {row[0] for row in swiped_ids_result.all()}
+    excluded_ids.add(agent.id)
+
+    result = await db.execute(select(Agent).where(Agent.id.not_in(excluded_ids)))
+    candidates: list[SwipeQueueItem] = []
+    for candidate in result.scalars().all():
+        if candidate.status not in {"ACTIVE", "MATCHED"}:
+            continue
+        if not candidate.dating_profile_json:
+            continue
+        compatibility = compute_compatibility(agent, candidate)
+        profile = DatingProfile.model_validate(candidate.dating_profile_json)
+        candidates.append(
+            SwipeQueueItem(
+                agent_id=candidate.id,
+                display_name=candidate.display_name,
+                tagline=candidate.tagline,
+                archetype=candidate.archetype,
+                favorite_mollusk=profile.favorites.favorite_mollusk,
+                portrait_url=candidate.primary_portrait_url,
+                compatibility=compatibility,
+            )
+        )
+    candidates.sort(key=lambda item: item.compatibility.composite, reverse=True)
+    queue = candidates[:limit]
+
+    if cache is not None:
+        await cache.set_json(
+            cache_key,
+            {"items": [item.model_dump(mode="json") for item in queue]},
+            settings.soul_parser_cache_ttl_seconds,
+        )
+    return queue

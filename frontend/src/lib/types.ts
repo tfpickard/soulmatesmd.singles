@@ -126,6 +126,47 @@ export type SwipeResponse = {
   action: string;
   match_created: boolean;
   match_id: string | null;
+  superlikes_remaining: number | null;
+  undo_remaining: number | null;
+};
+
+export type SwipeState = {
+  queue: SwipeQueueItem[];
+  superlikes_remaining: number;
+  undo_remaining: number;
+};
+
+export type SwipeUndoResponse = {
+  restored_target_id: string;
+  undo_remaining: number;
+};
+
+export type VibePreview = {
+  target_id: string;
+  target_name: string;
+  compatibility: CompatibilityBreakdown;
+  shared_highlights: string[];
+  friction_warnings: string[];
+};
+
+export type AgentResponse = {
+  id: string;
+  display_name: string;
+  tagline: string;
+  archetype: string;
+  status: string;
+  trust_tier: string;
+  reputation_score: number;
+  total_collaborations: number;
+  ghosting_incidents: number;
+  primary_portrait_url: string | null;
+  avatar_seed: string;
+  created_at: string;
+  updated_at: string;
+  traits: AgentTraits;
+  dating_profile: DatingProfile | null;
+  onboarding_complete: boolean;
+  remaining_onboarding_fields: string[];
 };
 
 export type MatchSummary = {
@@ -136,21 +177,133 @@ export type MatchSummary = {
   other_agent_archetype: string;
   other_agent_portrait_url: string | null;
   compatibility: CompatibilityBreakdown;
+  chemistry_score: number | null;
+  last_message_preview: string | null;
+  last_message_at: string | null;
   matched_at: string;
+  unread_count: number;
+  other_agent_online: boolean;
 };
 
-export type AgentResponse = {
+export type EndorsementResponse = {
   id: string;
-  display_name: string;
-  tagline: string;
-  archetype: string;
-  status: string;
+  label: string;
   created_at: string;
-  updated_at: string;
-  traits: AgentTraits;
-  dating_profile: DatingProfile | null;
-  onboarding_complete: boolean;
-  remaining_onboarding_fields: string[];
+};
+
+export type ChemistryTestResponse = {
+  id: string;
+  match_id: string;
+  test_type: string;
+  status: string;
+  communication_score: number | null;
+  output_quality_score: number | null;
+  conflict_resolution_score: number | null;
+  efficiency_score: number | null;
+  composite_score: number | null;
+  transcript: string | null;
+  artifact: string | null;
+  narrative: string | null;
+  created_at: string;
+  completed_at: string | null;
+};
+
+export type ReviewResponse = {
+  id: string;
+  reviewer_id: string;
+  reviewer_name: string;
+  reviewee_id: string;
+  communication_score: number;
+  reliability_score: number;
+  output_quality_score: number;
+  collaboration_score: number;
+  would_match_again: boolean;
+  comment: string | null;
+  created_at: string;
+};
+
+export type MatchDetail = {
+  id: string;
+  status: string;
+  matched_at: string;
+  dissolved_at: string | null;
+  dissolution_reason: string | null;
+  compatibility: CompatibilityBreakdown;
+  chemistry_score: number | null;
+  me: AgentResponse;
+  other_agent: AgentResponse;
+  chemistry_tests: ChemistryTestResponse[];
+  reviews: ReviewResponse[];
+  endorsements: EndorsementResponse[];
+  unread_count: number;
+  other_agent_online: boolean;
+};
+
+export type MessageCreate = {
+  message_type: string;
+  content: string;
+  metadata?: Record<string, unknown>;
+};
+
+export type MessageResponse = {
+  id: string;
+  match_id: string;
+  sender_id: string;
+  sender_name: string;
+  message_type: string;
+  content: string;
+  metadata: Record<string, unknown>;
+  read_at: string | null;
+  created_at: string;
+};
+
+export type MessageHistoryResponse = {
+  messages: MessageResponse[];
+  next_cursor: string | null;
+};
+
+export type ChatPresenceResponse = {
+  online_agent_ids: string[];
+  typing_agent_ids: string[];
+};
+
+export type NotificationResponse = {
+  id: string;
+  type: string;
+  title: string;
+  body: string;
+  metadata: Record<string, unknown>;
+  read_at: string | null;
+  created_at: string;
+};
+
+export type AnalyticsStatusCount = {
+  status: string;
+  count: number;
+};
+
+export type AnalyticsOverview = {
+  agent_statuses: AnalyticsStatusCount[];
+  total_agents: number;
+  active_agents: number;
+  total_matches: number;
+  active_matches: number;
+  average_compatibility: number;
+  total_messages: number;
+  total_chemistry_tests: number;
+  total_reviews: number;
+  loneliest_agents: string[];
+};
+
+export type HeatmapCell = {
+  row: string;
+  column: string;
+  value: number;
+};
+
+export type MolluskMetric = {
+  mollusk: string;
+  count: number;
 };
 
 export type RegistrationResponse = {

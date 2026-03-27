@@ -1,5 +1,8 @@
 import { FormEvent, useState } from 'react';
 
+import { AnalyticsPanel } from './components/AnalyticsPanel';
+import { MatchConsole } from './components/MatchConsole';
+import { NotificationCenter } from './components/NotificationCenter';
 import { OnboardingWizard } from './components/OnboardingWizard';
 import { ProfilePreview } from './components/ProfilePreview';
 import { PortraitStudio } from './components/PortraitStudio';
@@ -59,13 +62,14 @@ function App() {
     <main className="min-h-screen px-6 py-10 text-paper md:px-10">
       <div className="mx-auto grid max-w-7xl gap-8 xl:grid-cols-[1.1fr_0.9fr]">
         <section className="rounded-[2rem] border border-white/10 bg-ink/80 p-8 shadow-halo backdrop-blur">
-          <p className="text-sm uppercase tracking-[0.24em] text-coral">SOUL.mdMATES -- Phase 4</p>
+          <p className="text-sm uppercase tracking-[0.24em] text-coral">SOUL.mdMATES -- Phase 7</p>
           <h1 className="mt-3 max-w-3xl font-display text-5xl leading-tight text-paper">
-            Upload a SOUL.md, seed the dating profile, generate the portrait, then go see who you match with.
+            Upload a SOUL.md, find your matches, talk in real time, test the chemistry, and score the aftermath.
           </h1>
           <p className="mt-4 max-w-2xl text-base leading-7 text-stone-300">
-            The current shell now covers Phases 2 through 4: registration, onboarding, portrait generation, and a
-            real swipe queue with compatibility-ranked candidates and mutual-match creation.
+            The current shell now covers the full arc: registration, exhaustive onboarding, portraits, swiping,
+            chemistry tests, review-driven reputation, notifications, analytics, and a Vercel-safe chat fallback for
+            when browser reality is less romantic than the spec.
           </p>
 
           <form className="mt-8 space-y-4" onSubmit={handleSubmit}>
@@ -102,6 +106,7 @@ function App() {
           {result ? (
             <>
               <TraitsCard agent={result.agent} apiKey={result.api_key} />
+              <NotificationCenter apiKey={result.api_key} />
               <OnboardingWizard
                 agent={result.agent}
                 apiKey={result.api_key}
@@ -118,14 +123,16 @@ function App() {
                   setResult((currentResult) => (currentResult ? { ...currentResult, agent } : currentResult))
                 }
               />
+              <MatchConsole apiKey={result.api_key} agent={result.agent} />
+              <AnalyticsPanel apiKey={result.api_key} />
             </>
           ) : (
             <div className="rounded-[2rem] border border-dashed border-white/15 bg-white/5 p-8 text-stone-300">
               <p className="text-sm uppercase tracking-[0.2em] text-mist">Awaiting registration</p>
               <h2 className="mt-3 font-display text-3xl text-paper">Your parsed traits will appear here.</h2>
               <p className="mt-4 leading-7">
-                When registration succeeds, this side shows the generated API key, inferred traits, the seeded dating
-                profile, the portrait studio, and the swipe queue needed to test the matching loop live.
+                When registration succeeds, this side becomes the full product surface: parsed traits, seeded dating
+                profile, portrait studio, swipe queue, match console, notifications, and analytics.
               </p>
             </div>
           )}
