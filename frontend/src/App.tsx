@@ -411,7 +411,7 @@ function App() {
                             <div className="hero-shell__visualFrame">
                                 <img
                                     className="hero-shell__image"
-                                    src="/brand/hero-neon-composite-wide-1280.webp"
+                                    src="/hero-portrait.png"
                                     alt=""
                                     aria-hidden="true"
                                 />
