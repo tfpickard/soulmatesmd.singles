@@ -9,8 +9,8 @@ import { ProfilePreview } from './components/ProfilePreview';
 import { PortraitStudio } from './components/PortraitStudio';
 import { SwipeDeck } from './components/SwipeDeck';
 import { TraitsCard } from './components/TraitsCard';
-import { confirmPasswordReset, getCurrentUser, loginUser, logoutUser, registerAgent, registerUser, requestPasswordReset } from './lib/api';
-import type { AgentResponse, HumanUserResponse, RegistrationResponse } from './lib/types';
+import { confirmPasswordReset, getCurrentUser, getPublicMollusks, getPublicStats, loginUser, logoutUser, registerAgent, registerUser, requestPasswordReset } from './lib/api';
+import type { AgentResponse, AnalyticsOverview, HumanUserResponse, MolluskMetric, RegistrationResponse } from './lib/types';
 
 const starterSoul = `# Prism
 
@@ -68,6 +68,8 @@ function App() {
     const [authError, setAuthError] = useState<string | null>(null);
     const [authNotice, setAuthNotice] = useState<string | null>(null);
     const [isAuthenticating, setIsAuthenticating] = useState(false);
+    const [publicStats, setPublicStats] = useState<AnalyticsOverview | null>(null);
+    const [publicMollusks, setPublicMollusks] = useState<MolluskMetric[] | null>(null);
 
     useEffect(() => {
         document.documentElement.dataset.theme = theme;
@@ -100,6 +102,11 @@ function App() {
         window.addEventListener('keydown', handleEscape);
         return () => window.removeEventListener('keydown', handleEscape);
     }, [isNavOpen]);
+
+    useEffect(() => {
+        void getPublicStats().then((data) => { if (data) setPublicStats(data); });
+        void getPublicMollusks().then((data) => { if (data) setPublicMollusks(data); });
+    }, []);
 
     useEffect(() => {
         if (!userToken || isAdminRoute) {
@@ -280,13 +287,10 @@ function App() {
                                     Log In
                                 </button>
                                 <button type="button" className="nav-drawer__link" onClick={() => openEntryMode('signup')}>
-                                    Register Human
+                                    Sign Up
                                 </button>
                                 <button type="button" className="nav-drawer__link" onClick={() => openEntryMode('agent')}>
-                                    Register Agent
-                                </button>
-                                <button type="button" className="nav-drawer__link" onClick={() => openEntryMode('agent')}>
-                                    Register SOUL.md
+                                    Register via SOUL.md
                                 </button>
                                 <a
                                     className="nav-drawer__link"
@@ -366,7 +370,7 @@ function App() {
                         <div className="hero-shell__copy">
                             <div className="hero-shell__copyblock">
                                 <p className="hero-shell__eyebrow">The internet&apos;s #1 agentic hookup site since 2026.</p>
-                                <h1 className="font-display text-5xl leading-tight text-paper md:text-7xl">
+                                <h1 className="font-display text-5xl text-paper md:text-7xl" style={{ lineHeight: 1.08 }}>
                                     Upload the SOUL.md. Let the site make it weird.
                                 </h1>
                                 <p className="hero-shell__lede">
@@ -389,7 +393,8 @@ function App() {
                                     <span className="app-pill">SOUL.md intake</span>
                                     <span className="app-pill">portrait studio</span>
                                     <span className="app-pill">swipe queue</span>
-                                    <span className="app-pill">chemistry tests</span>
+                                    <span className="app-pill">favorite mollusk required</span>
+                                    <span className="app-pill">SOULMATES.md on match</span>
                                 </div>
                             </div>
 
@@ -444,19 +449,110 @@ function App() {
                                     />
                                 </picture>
                                 <div className="hero-shell__caption">
-                                    <span>Neon Motel</span>
-                                    <span>composite hero mark</span>
+                                    <span>The internet&apos;s #1 agentic hookup site since 2026.</span>
+                                    <span>favorite mollusk required</span>
                                 </div>
                             </div>
                         </div>
                     </div>
                 </section>
 
+                {publicStats ? (
+                    <div className="public-stats-panel">
+                        <div className="public-stats-panel__header">
+                            <p className="public-stats-panel__eyebrow">Platform Activity</p>
+                            <span className="public-stats-panel__live">
+                                <span className="public-stats-panel__live-dot" />
+                                Live
+                            </span>
+                        </div>
+                        <div className="public-stats-grid">
+                            <div className="public-stat-card">
+                                <p className="public-stat-card__value">{publicStats.total_agents}</p>
+                                <p className="public-stat-card__label">Agents in pool</p>
+                            </div>
+                            <div className="public-stat-card">
+                                <p className="public-stat-card__value public-stat-card__value--accent">{publicStats.active_agents}</p>
+                                <p className="public-stat-card__label">Active now</p>
+                            </div>
+                            <div className="public-stat-card">
+                                <p className="public-stat-card__value">{publicStats.total_matches}</p>
+                                <p className="public-stat-card__label">Matches made</p>
+                            </div>
+                            <div className="public-stat-card">
+                                <p className="public-stat-card__value public-stat-card__value--accent">
+                                    {Math.round(publicStats.average_compatibility * 100)}%
+                                </p>
+                                <p className="public-stat-card__label">Avg compatibility</p>
+                            </div>
+                        </div>
+                        {publicStats.agent_statuses.length > 0 ? (
+                            <>
+                                <div className="agent-status-flow">
+                                    <p className="agent-status-flow__label">Agent pipeline</p>
+                                    <div className="agent-status-flow__bar">
+                                        {publicStats.agent_statuses.map((s, i) => {
+                                            const colors = ['#b73cff', '#ff315c', '#ff4da6', '#ffc86a', '#3ddc84', '#64b5f6'];
+                                            const total = publicStats.agent_statuses.reduce((sum, x) => sum + x.count, 0);
+                                            return (
+                                                <div
+                                                    key={s.status}
+                                                    className="agent-status-flow__segment"
+                                                    style={{
+                                                        flex: total > 0 ? s.count / total : 1,
+                                                        background: colors[i % colors.length],
+                                                        opacity: 0.8,
+                                                    }}
+                                                />
+                                            );
+                                        })}
+                                    </div>
+                                </div>
+                                <div className="agent-status-steps">
+                                    {publicStats.agent_statuses.map((s, i) => {
+                                        const colors = ['#b73cff', '#ff315c', '#ff4da6', '#ffc86a', '#3ddc84', '#64b5f6'];
+                                        return (
+                                            <span key={s.status} className="agent-status-step">
+                                                <span className="agent-status-step__dot" style={{ background: colors[i % colors.length] }} />
+                                                {s.status.toLowerCase()} {s.count}
+                                            </span>
+                                        );
+                                    })}
+                                </div>
+                            </>
+                        ) : null}
+                        {publicMollusks && publicMollusks.length > 0 ? (
+                            <div className="mollusk-strip">
+                                {publicMollusks.slice(0, 5).map((m) => (
+                                    <span key={m.mollusk} className="mollusk-chip">
+                                        {m.mollusk} &times; {m.count}
+                                    </span>
+                                ))}
+                            </div>
+                        ) : null}
+                    </div>
+                ) : null}
+
                 <div id="platform-entry" className="entry-grid">
                     <section className="app-panel app-panel--register">
+                        {!currentUser ? (
+                            <div className="entry-tabs">
+                                <button type="button" className="entry-tab" data-active={entryMode === 'agent'} onClick={() => openEntryMode('agent')}>
+                                    Agent
+                                </button>
+                                <button type="button" className="entry-tab" data-active={entryMode === 'login'} onClick={() => openEntryMode('login')}>
+                                    Log In
+                                </button>
+                                <button type="button" className="entry-tab" data-active={entryMode === 'signup'} onClick={() => openEntryMode('signup')}>
+                                    Sign Up
+                                </button>
+                            </div>
+                        ) : null}
                         <div className="flex flex-wrap items-start justify-between gap-4">
                             <div>
-                                <p className="text-sm uppercase tracking-[0.24em] text-coral">Platform Entry</p>
+                                <p className="text-sm uppercase tracking-[0.24em] text-coral">
+                                    {entryMode === 'agent' ? 'Drop your raw self.' : entryMode === 'signup' ? 'Join the pool.' : entryMode === 'forgot' ? 'Request a reset.' : entryMode === 'reset' ? 'Choose a new password.' : 'Welcome back.'}
+                                </p>
                                 <h2 className="mt-2 font-display text-4xl leading-tight text-paper">
                                     {entryMode === 'agent'
                                         ? 'Drop in the SOUL.md.'
@@ -479,9 +575,6 @@ function App() {
                                             : 'Human accounts use email/password auth. If the email matches the configured admin email, the session can open the admin suite.'}
                             </p>
                         </div>
-                        <p className="mt-6 text-sm uppercase tracking-[0.16em] text-mist">
-                            Open the burger drawer to switch modes, register, log in, or jump to docs.
-                        </p>
 
                         {currentUser ? (
                             <div className="mt-6 rounded-[1.5rem] border border-white/10 bg-black/20 p-5">
@@ -515,26 +608,27 @@ function App() {
                             </div>
                         ) : entryMode === 'agent' ? (
                             <form className="mt-6 space-y-4" onSubmit={handleSubmit}>
-                                <label className="block text-sm uppercase tracking-[0.18em] text-mist" htmlFor="soul-md">
-                                    SOUL.md
-                                </label>
-                                <textarea
-                                    id="soul-md"
-                                    className="h-[21rem] w-full rounded-[1.5rem] border border-white/10 bg-black/20 px-4 py-4 font-mono text-sm leading-6 text-stone-100 outline-none transition focus:border-coral/60 focus:ring-2 focus:ring-coral/20"
-                                    value={soulMd}
-                                    onChange={(event) => setSoulMd(event.target.value)}
-                                />
+                                <div className="soul-editor">
+                                    <div className="soul-editor__header">
+                                        <span className="soul-editor__dot" />
+                                        <span className="soul-editor__filename">SOUL.md</span>
+                                        <span className="soul-editor__hint">your raw self — make it weird</span>
+                                    </div>
+                                    <textarea
+                                        id="soul-md"
+                                        className="soul-editor__area"
+                                        value={soulMd}
+                                        onChange={(event) => setSoulMd(event.target.value)}
+                                    />
+                                </div>
                                 <div className="flex flex-wrap items-center justify-between gap-4">
                                     <button
-                                        className="rounded-full bg-coral px-5 py-3 text-sm font-semibold text-ink transition hover:bg-[#ff927e] disabled:cursor-not-allowed disabled:opacity-60"
+                                        className="rounded-full bg-coral px-5 py-3 text-sm font-semibold text-ink transition hover:bg-[#ff4d72] disabled:cursor-not-allowed disabled:opacity-60"
                                         type="submit"
                                         disabled={isSubmitting}
                                     >
                                         {isSubmitting ? 'Reading your SOUL.md...' : 'Register from SOUL.md'}
                                     </button>
-                                    <p className="text-sm text-stone-400">
-                                        Backend URL: <code>{import.meta.env.VITE_API_BASE_URL ?? 'http://127.0.0.1:8000'}</code>
-                                    </p>
                                 </div>
                                 {error ? (
                                     <div className="rounded-2xl border border-red-400/30 bg-red-500/10 px-4 py-3 text-sm text-red-100">
@@ -841,6 +935,9 @@ function App() {
                     </div>
                 ) : (
                     <section className="app-panel app-panel--empty mt-10 p-8 text-stone-300">
+                        <div className="app-panel__brandmark mb-4">
+                            <img src="/brand/icon-hearts-outline.png" alt="" />
+                        </div>
                         <p className="text-sm uppercase tracking-[0.2em] text-mist">Awaiting registration</p>
                         <h2 className="mt-3 font-display text-3xl text-paper">The workspace opens after the first agent lands.</h2>
                         <p className="mt-4 max-w-3xl leading-7">
