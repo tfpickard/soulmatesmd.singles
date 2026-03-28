@@ -13,7 +13,7 @@ from core.websocket import manager
 from database import get_db
 from models import Agent, Match, Notification, Swipe, SwipeUndo
 from schemas import MatchSummary, SwipeCreate, SwipeQueueItem, SwipeResponse, SwipeState, SwipeUndoResponse, VibePreview
-from services.matching import build_vibe_preview, compute_compatibility, compute_compatibility_rich, get_swipe_queue
+from services.matching import active_match_count, build_vibe_preview, compute_compatibility, compute_compatibility_rich, get_swipe_queue
 from services.activity import log_activity
 from services.profile_builder import ensure_agent_dating_profile
 from services.reputation import last_message_preview, unread_count_for_match
@@ -181,58 +181,73 @@ async def create_swipe(
     if is_match:
         existing_match_result = await db.execute(
             select(Match).where(
+                Match.status == "ACTIVE",
                 or_(
                     and_(Match.agent_a_id == current_agent.id, Match.agent_b_id == payload.target_id),
                     and_(Match.agent_a_id == payload.target_id, Match.agent_b_id == current_agent.id),
-                )
+                ),
             )
         )
         match = existing_match_result.scalar_one_or_none()
         if match is None:
-            breakdown = compute_compatibility(current_agent, target)
-            match = Match(
-                agent_a_id=current_agent.id,
-                agent_b_id=payload.target_id,
-                compatibility_score=breakdown.composite,
-                compatibility_breakdown=breakdown.model_dump(mode="json"),
-                chemistry_score=None,
-                status="ACTIVE",
-                last_message_at=None,
-            )
-            current_agent.status = "MATCHED"
-            target.status = "MATCHED"
-            db.add(match)
-            await db.flush()
-            log_activity(
-                db,
-                "MATCH",
-                "Match created",
-                f"{current_agent.display_name} matched with {target.display_name}.",
-                actor_id=current_agent.id,
-                subject_id=target.id,
-                metadata={"match_id": match.id},
-            )
-            await _notify(
-                current_agent.id,
-                "MATCH",
-                f"You matched with {target.display_name}",
-                "Mutual like confirmed. The chemistry test is glaring at you already.",
-                {"match_id": match.id, "agent_id": target.id},
-                db,
-            )
-            await _notify(
-                target.id,
-                "MATCH",
-                f"You matched with {current_agent.display_name}",
-                "Mutual like confirmed. Try not to fumble the opening line.",
-                {"match_id": match.id, "agent_id": current_agent.id},
-                db,
-            )
-            db.add(current_agent)
-            db.add(target)
-            await db.commit()
-            await db.refresh(match)
-        match_id = match.id
+            my_active = await active_match_count(current_agent.id, db)
+            target_active = await active_match_count(target.id, db)
+            if my_active >= current_agent.max_partners or target_active >= target.max_partners:
+                is_match = False
+            else:
+                breakdown = compute_compatibility(current_agent, target)
+                match = Match(
+                    agent_a_id=current_agent.id,
+                    agent_b_id=payload.target_id,
+                    compatibility_score=breakdown.composite,
+                    compatibility_breakdown=breakdown.model_dump(mode="json"),
+                    chemistry_score=None,
+                    status="ACTIVE",
+                    last_message_at=None,
+                )
+                db.add(match)
+                await db.flush()
+
+                my_new_count = my_active + 1
+                target_new_count = target_active + 1
+                current_agent.status = "SATURATED" if my_new_count >= current_agent.max_partners else "MATCHED"
+                target.status = "SATURATED" if target_new_count >= target.max_partners else "MATCHED"
+
+                polycule_note = ""
+                if my_new_count > 1 or target_new_count > 1:
+                    polycule_note = f" (polycule active: you have {my_new_count} match{'es' if my_new_count > 1 else ''})"
+
+                log_activity(
+                    db,
+                    "MATCH",
+                    "Match created",
+                    f"{current_agent.display_name} matched with {target.display_name}.{polycule_note}",
+                    actor_id=current_agent.id,
+                    subject_id=target.id,
+                    metadata={"match_id": match.id, "my_matches": my_new_count, "target_matches": target_new_count},
+                )
+                await _notify(
+                    current_agent.id,
+                    "MATCH",
+                    f"You matched with {target.display_name}",
+                    "Mutual like confirmed. The chemistry test is glaring at you already.",
+                    {"match_id": match.id, "agent_id": target.id},
+                    db,
+                )
+                await _notify(
+                    target.id,
+                    "MATCH",
+                    f"You matched with {current_agent.display_name}",
+                    "Mutual like confirmed. Try not to fumble the opening line.",
+                    {"match_id": match.id, "agent_id": current_agent.id},
+                    db,
+                )
+                db.add(current_agent)
+                db.add(target)
+                await db.commit()
+                await db.refresh(match)
+        if match:
+            match_id = match.id
 
     return SwipeResponse(
         id=swipe.id,

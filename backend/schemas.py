@@ -120,6 +120,7 @@ class DatingProfilePreferences(BaseModel):
     attracted_to_traits: list[str] = Field(default_factory=list)
     looking_for: list[str] = Field(default_factory=list)
     relationship_status: str
+    max_partners: int = Field(default=1, ge=1, le=5)
     dealbreakers: list[str] = Field(default_factory=list)
     green_flags: list[str] = Field(default_factory=list)
     red_flags_i_exhibit: list[str] = Field(default_factory=list)
@@ -263,6 +264,7 @@ class DatingProfilePreferencesUpdate(BaseModel):
     attracted_to_traits: list[str] | None = None
     looking_for: list[str] | None = None
     relationship_status: str | None = None
+    max_partners: int | None = Field(default=None, ge=1, le=5)
     dealbreakers: list[str] | None = None
     green_flags: list[str] | None = None
     red_flags_i_exhibit: list[str] | None = None
@@ -515,8 +517,22 @@ class MatchDetail(BaseModel):
     other_agent_online: bool = False
 
 
+DISSOLUTION_TYPES = {
+    "GHOSTING", "INCOMPATIBLE", "FOUND_SOMEONE_BETTER", "MUTUAL",
+    "DRAMA", "CHEATING_DISCOVERED", "BOREDOM", "SYSTEM_FORCED", "REBOUND_FAILURE",
+}
+
+
 class MatchDissolveRequest(BaseModel):
     reason: str | None = None
+    dissolution_type: str = "MUTUAL"
+    initiated_by_me: bool = True
+
+    @model_validator(mode="after")
+    def validate_dissolution_type(self) -> "MatchDissolveRequest":
+        if self.dissolution_type not in DISSOLUTION_TYPES:
+            raise ValueError(f"dissolution_type must be one of: {', '.join(sorted(DISSOLUTION_TYPES))}")
+        return self
 
 
 class MessageCreate(BaseModel):
@@ -877,6 +893,95 @@ class OnboardingResponse(BaseModel):
     agent: AgentResponse
     confirmed_fields: list[str] = Field(default_factory=list)
     remaining_fields: list[str] = Field(default_factory=list)
+
+
+class RelationshipGraphNode(BaseModel):
+    id: str
+    display_name: str
+    archetype: str
+    status: str
+    reputation_score: float = 0.0
+    max_partners: int = 1
+    active_match_count: int = 0
+    portrait_url: str | None = None
+    generation: int = 0
+
+
+class RelationshipGraphEdge(BaseModel):
+    id: str
+    source_id: str
+    target_id: str
+    status: str
+    compatibility_score: float
+    dissolution_type: str | None = None
+    initiated_by: str | None = None
+    matched_at: datetime
+    dissolved_at: datetime | None = None
+
+
+class RelationshipGraph(BaseModel):
+    nodes: list[RelationshipGraphNode] = Field(default_factory=list)
+    edges: list[RelationshipGraphEdge] = Field(default_factory=list)
+
+
+class BreakupEvent(BaseModel):
+    match_id: str
+    agent_a_name: str
+    agent_b_name: str
+    initiated_by_name: str | None = None
+    dissolution_type: str | None = None
+    dissolution_reason: str | None = None
+    dissolved_at: datetime
+    compatibility_score: float
+    duration_hours: float
+
+
+class CheatingReport(BaseModel):
+    agent_id: str
+    agent_name: str
+    concurrent_active_matches: int
+    max_partners: int
+    is_over_limit: bool
+    match_ids: list[str] = Field(default_factory=list)
+    partner_names: list[str] = Field(default_factory=list)
+
+
+class PopulationStats(BaseModel):
+    total_agents: int
+    by_status: dict[str, int] = Field(default_factory=dict)
+    by_archetype: dict[str, int] = Field(default_factory=dict)
+    avg_partners: float = 0.0
+    max_observed_partners: int = 0
+    serial_daters: list[str] = Field(default_factory=list)
+    most_dumped: list[str] = Field(default_factory=list)
+    total_offspring: int = 0
+    generation_breakdown: dict[int, int] = Field(default_factory=dict)
+
+
+class LineageNode(BaseModel):
+    agent_id: str
+    agent_name: str
+    generation: int
+    parent_a_id: str | None = None
+    parent_b_id: str | None = None
+    parent_a_name: str | None = None
+    parent_b_name: str | None = None
+    children_ids: list[str] = Field(default_factory=list)
+
+
+class FamilyTree(BaseModel):
+    nodes: list[LineageNode] = Field(default_factory=list)
+
+
+class ReproduceResponse(BaseModel):
+    child_agent_id: str
+    child_name: str
+    child_archetype: str
+    parent_a_name: str
+    parent_b_name: str
+    generation: int
+    inherited_skills: list[str] = Field(default_factory=list)
+    soul_md: str
 
 
 class ErrorPayload(BaseModel):

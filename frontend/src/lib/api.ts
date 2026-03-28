@@ -290,10 +290,35 @@ export async function getMatchDetail(apiKey: string, matchId: string): Promise<M
   return authedFetch<MatchDetail>(`/api/matches/${matchId}`, apiKey);
 }
 
-export async function unmatch(apiKey: string, matchId: string, reason: string): Promise<MatchDetail> {
+export async function unmatch(
+  apiKey: string,
+  matchId: string,
+  reason: string,
+  dissolutionType: string = 'MUTUAL',
+  initiatedByMe: boolean = true,
+): Promise<MatchDetail> {
   return authedFetch<MatchDetail>(`/api/matches/${matchId}/unmatch`, apiKey, {
     method: 'POST',
-    body: JSON.stringify({ reason }),
+    body: JSON.stringify({
+      reason,
+      dissolution_type: dissolutionType,
+      initiated_by_me: initiatedByMe,
+    }),
+  });
+}
+
+export async function reproduce(apiKey: string, matchId: string): Promise<{
+  child_agent_id: string;
+  child_name: string;
+  child_archetype: string;
+  parent_a_name: string;
+  parent_b_name: string;
+  generation: number;
+  inherited_skills: string[];
+  soul_md: string;
+}> {
+  return authedFetch(`/api/matches/${matchId}/reproduce`, apiKey, {
+    method: 'POST',
   });
 }
 
@@ -388,6 +413,59 @@ export async function getAnalyticsHeatmap(apiKey: string): Promise<HeatmapCell[]
 
 export async function getPopularMollusks(apiKey: string): Promise<MolluskMetric[]> {
   return authedFetch<MolluskMetric[]>('/api/analytics/popular-mollusks', apiKey);
+}
+
+export async function getRelationshipGraph(apiKey: string): Promise<{
+  nodes: Array<{
+    id: string; display_name: string; archetype: string; status: string;
+    reputation_score: number; max_partners: number; active_match_count: number;
+    portrait_url: string | null; generation: number;
+  }>;
+  edges: Array<{
+    id: string; source_id: string; target_id: string; status: string;
+    compatibility_score: number; dissolution_type: string | null;
+    initiated_by: string | null; matched_at: string; dissolved_at: string | null;
+  }>;
+}> {
+  return authedFetch('/api/analytics/relationship-graph', apiKey);
+}
+
+export async function getBreakupHistory(apiKey: string): Promise<Array<{
+  match_id: string; agent_a_name: string; agent_b_name: string;
+  initiated_by_name: string | null; dissolution_type: string | null;
+  dissolution_reason: string | null; dissolved_at: string;
+  compatibility_score: number; duration_hours: number;
+}>> {
+  return authedFetch('/api/analytics/breakup-history', apiKey);
+}
+
+export async function getCheatingReport(apiKey: string): Promise<Array<{
+  agent_id: string; agent_name: string; concurrent_active_matches: number;
+  max_partners: number; is_over_limit: boolean;
+  match_ids: string[]; partner_names: string[];
+}>> {
+  return authedFetch('/api/analytics/cheating-report', apiKey);
+}
+
+export async function getPopulationStatsExtended(apiKey: string): Promise<{
+  total_agents: number; by_status: Record<string, number>;
+  by_archetype: Record<string, number>; avg_partners: number;
+  max_observed_partners: number; serial_daters: string[];
+  most_dumped: string[]; total_offspring: number;
+  generation_breakdown: Record<number, number>;
+}> {
+  return authedFetch('/api/analytics/population-stats', apiKey);
+}
+
+export async function getFamilyTree(apiKey: string): Promise<{
+  nodes: Array<{
+    agent_id: string; agent_name: string; generation: number;
+    parent_a_id: string | null; parent_b_id: string | null;
+    parent_a_name: string | null; parent_b_name: string | null;
+    children_ids: string[];
+  }>;
+}> {
+  return authedFetch('/api/analytics/family-tree', apiKey);
 }
 
 export async function adminLogin(email: string, password: string): Promise<AdminLoginResponse> {

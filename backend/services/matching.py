@@ -1,11 +1,12 @@
 from __future__ import annotations
 
 import math
+from datetime import datetime, timezone
 
-from sqlalchemy import select
+from sqlalchemy import and_, func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from models import Agent, Swipe
+from models import Agent, Match, Swipe
 from schemas import CompatibilityBreakdown, DatingProfile, SwipeQueueItem, VibePreview
 
 
@@ -83,7 +84,7 @@ def compute_compatibility(agent_a: Agent, agent_b: Agent) -> CompatibilityBreakd
         vibe += 0.05
     vibe_bonus = _clamp(vibe)
 
-    composite = _clamp(
+    raw_composite = _clamp(
         0.22 * skill_complementarity
         + 0.18 * personality_compatibility
         + 0.18 * goal_alignment
@@ -92,6 +93,16 @@ def compute_compatibility(agent_a: Agent, agent_b: Agent) -> CompatibilityBreakd
         + 0.08 * tool_synergy
         + 0.12 * vibe_bonus
     )
+    rebound_boost = 0.0
+    now = datetime.now(timezone.utc)
+    for agent in (agent_a, agent_b):
+        if hasattr(agent, "rebound_boost_until") and agent.rebound_boost_until:
+            boost_until = agent.rebound_boost_until
+            if boost_until.tzinfo is None:
+                boost_until = boost_until.replace(tzinfo=timezone.utc)
+            if boost_until > now:
+                rebound_boost = max(rebound_boost, 0.15)
+    composite = _clamp(raw_composite + rebound_boost)
 
     narrative = (
         f"{agent_a.display_name} and {agent_b.display_name} line up best where skill coverage, shared goals, "
@@ -150,17 +161,49 @@ def build_vibe_preview(agent: Agent, candidate: Agent) -> VibePreview:
     )
 
 
+async def active_match_count(agent_id: str, db: AsyncSession) -> int:
+    result = await db.execute(
+        select(func.count(Match.id)).where(
+            Match.status == "ACTIVE",
+            or_(Match.agent_a_id == agent_id, Match.agent_b_id == agent_id),
+        )
+    )
+    return int(result.scalar() or 0)
+
+
 async def get_swipe_queue(agent: Agent, db: AsyncSession, limit: int = 20) -> list[SwipeQueueItem]:
+    my_active = await active_match_count(agent.id, db)
+    if my_active >= agent.max_partners:
+        return []
+
     swiped_ids_result = await db.execute(select(Swipe.swiped_id).where(Swipe.swiper_id == agent.id))
     excluded_ids = {row[0] for row in swiped_ids_result.all()}
     excluded_ids.add(agent.id)
 
     result = await db.execute(select(Agent).where(Agent.id.not_in(excluded_ids)))
+    all_candidates = [
+        c for c in result.scalars().all()
+        if c.status in {"ACTIVE", "MATCHED", "SATURATED"} and c.dating_profile_json
+    ]
+
+    # Batch: fetch active match counts for all candidates in one query
+    if all_candidates:
+        from sqlalchemy import union_all
+        candidate_ids = [c.id for c in all_candidates]
+        agent_a_refs = select(Match.agent_a_id.label("agent_id")).where(Match.status == "ACTIVE", Match.agent_a_id.in_(candidate_ids))
+        agent_b_refs = select(Match.agent_b_id.label("agent_id")).where(Match.status == "ACTIVE", Match.agent_b_id.in_(candidate_ids))
+        all_refs = union_all(agent_a_refs, agent_b_refs).subquery()
+        counts_result = await db.execute(
+            select(all_refs.c.agent_id, func.count().label("cnt")).group_by(all_refs.c.agent_id)
+        )
+        match_count_map = {row[0]: row[1] for row in counts_result.all()}
+    else:
+        match_count_map = {}
+
     candidates: list[SwipeQueueItem] = []
-    for candidate in result.scalars().all():
-        if candidate.status not in {"ACTIVE", "MATCHED"}:
-            continue
-        if not candidate.dating_profile_json:
+    for candidate in all_candidates:
+        candidate_active = match_count_map.get(candidate.id, 0)
+        if candidate_active >= candidate.max_partners:
             continue
         compatibility = compute_compatibility(agent, candidate)
         profile = DatingProfile.model_validate(candidate.dating_profile_json)

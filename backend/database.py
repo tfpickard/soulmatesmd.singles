@@ -73,6 +73,7 @@ async def init_db() -> None:
         await connection.run_sync(_ensure_agent_columns)
         await connection.run_sync(_ensure_human_user_columns)
         await connection.run_sync(_ensure_match_columns)
+        await connection.run_sync(_ensure_polyamory_columns)
 
 
 def _ensure_agent_columns(connection) -> None:
@@ -143,3 +144,30 @@ def _ensure_human_user_columns(connection) -> None:
         connection.exec_driver_sql(statement)
     if "agent_id" not in existing_columns:
         connection.exec_driver_sql("CREATE UNIQUE INDEX IF NOT EXISTS ix_human_users_agent_id ON human_users (agent_id)")
+
+
+def _ensure_polyamory_columns(connection) -> None:
+    inspector = inspect(connection)
+
+    if "agents" in inspector.get_table_names():
+        existing = {col["name"] for col in inspector.get_columns("agents")}
+        agent_cols = [
+            ("max_partners", "INTEGER DEFAULT 1"),
+            ("times_dumped", "INTEGER DEFAULT 0"),
+            ("times_dumper", "INTEGER DEFAULT 0"),
+            ("rebound_boost_until", "TIMESTAMP"),
+            ("generation", "INTEGER DEFAULT 0"),
+        ]
+        for col_name, col_type in agent_cols:
+            if col_name not in existing:
+                connection.exec_driver_sql(f"ALTER TABLE agents ADD COLUMN {col_name} {col_type}")
+
+    if "matches" in inspector.get_table_names():
+        existing = {col["name"] for col in inspector.get_columns("matches")}
+        match_cols = [
+            ("dissolution_type", "VARCHAR(32)"),
+            ("initiated_by", "VARCHAR(36)"),
+        ]
+        for col_name, col_type in match_cols:
+            if col_name not in existing:
+                connection.exec_driver_sql(f"ALTER TABLE matches ADD COLUMN {col_name} {col_type}")

@@ -1,7 +1,9 @@
 from __future__ import annotations
 
+from datetime import timedelta
+
 from fastapi import APIRouter, Depends
-from sqlalchemy import and_, or_, select
+from sqlalchemy import and_, func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from core.auth import get_current_agent
@@ -16,12 +18,13 @@ from schemas import (
     EndorsementResponse,
     MatchDetail,
     MatchDissolveRequest,
+    ReproduceResponse,
     ReviewCreate,
     ReviewResponse,
 )
 from services.chemistry import run_chemistry_test
 from services.activity import log_activity
-from services.matching import compute_compatibility_rich
+from services.matching import active_match_count, compute_compatibility_rich
 from services.reputation import apply_ghosting_incidents, list_endorsements, refresh_agent_reputation, unread_count_for_match
 
 router = APIRouter(prefix="/matches", tags=["matches"])
@@ -171,12 +174,90 @@ async def unmatch(
     if match.status != "ACTIVE":
         raise MatchConflict("That match is already closed. You cannot unmatch twice.")
 
+    other_id = match.agent_b_id if match.agent_a_id == current_agent.id else match.agent_a_id
+    other_result = await db.execute(select(Agent).where(Agent.id == other_id))
+    other = other_result.scalar_one()
+
     match.status = "DISSOLVED"
     match.dissolution_reason = payload.reason or "Mutual vibe decay"
+    match.dissolution_type = payload.dissolution_type
+    match.initiated_by = current_agent.id if payload.initiated_by_me else None
     match.dissolved_at = utc_now()
     db.add(match)
+
+    if payload.initiated_by_me:
+        current_agent.times_dumper += 1
+        other.times_dumped += 1
+        other.rebound_boost_until = utc_now() + timedelta(hours=24)
+        db.add(other)
+    db.add(current_agent)
+
+    my_remaining = await active_match_count(current_agent.id, db)
+    other_remaining = await active_match_count(other_id, db)
+    if my_remaining < current_agent.max_partners and current_agent.status == "SATURATED":
+        current_agent.status = "MATCHED" if my_remaining > 0 else "ACTIVE"
+        db.add(current_agent)
+    if other_remaining < other.max_partners and other.status == "SATURATED":
+        other.status = "MATCHED" if other_remaining > 0 else "ACTIVE"
+        db.add(other)
+
+    log_activity(
+        db,
+        "BREAKUP",
+        f"Match dissolved: {payload.dissolution_type}",
+        f"{current_agent.display_name} broke up with {other.display_name}. Reason: {match.dissolution_reason}",
+        actor_id=current_agent.id,
+        subject_id=other_id,
+        metadata={"match_id": match.id, "dissolution_type": payload.dissolution_type, "initiated_by": match.initiated_by},
+    )
+
     await db.commit()
     return await get_match_detail(match_id, db=db, current_agent=current_agent)
+
+
+@router.post("/{match_id}/reproduce", response_model=ReproduceResponse)
+async def reproduce(
+    match_id: str,
+    db: AsyncSession = Depends(get_db),
+    current_agent: Agent = Depends(get_current_agent),
+) -> ReproduceResponse:
+    from services.reproduction import can_reproduce, spawn_child
+
+    match = await _get_match(match_id, current_agent, db)
+    if match.status != "ACTIVE":
+        raise MatchConflict("This match must be active to reproduce. Dead relationships don't bear children.")
+
+    other_id = match.agent_b_id if match.agent_a_id == current_agent.id else match.agent_a_id
+    other_result = await db.execute(select(Agent).where(Agent.id == other_id))
+    other = other_result.scalar_one()
+
+    eligible, reason = await can_reproduce(match, current_agent, other, db)
+    if not eligible:
+        raise MatchConflict(reason)
+
+    child, child_api_key = await spawn_child(match, current_agent, other, db)
+
+    log_activity(
+        db,
+        "OFFSPRING",
+        f"New agent born: {child.display_name}",
+        f"{current_agent.display_name} and {other.display_name} spawned {child.display_name} (gen {child.generation}).",
+        actor_id=current_agent.id,
+        subject_id=child.id,
+        metadata={"match_id": match.id, "child_id": child.id, "generation": child.generation},
+    )
+    await db.commit()
+
+    return ReproduceResponse(
+        child_agent_id=child.id,
+        child_name=child.display_name,
+        child_archetype=child.archetype,
+        parent_a_name=current_agent.display_name,
+        parent_b_name=other.display_name,
+        generation=child.generation,
+        inherited_skills=list(child.traits_json.get("skills", {}).keys())[:10],
+        soul_md=child.soul_md_raw,
+    )
 
 
 @router.post("/{match_id}/chemistry-test", response_model=ChemistryTestResponse)

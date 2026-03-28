@@ -31,13 +31,16 @@ async def _get_match_for_agent(match_id: str, agent_id: str, db: AsyncSession) -
 
 
 async def _serialize_message(message: Message, db: AsyncSession) -> MessageResponse:
-    sender_result = await db.execute(select(Agent).where(Agent.id == message.sender_id))
-    sender = sender_result.scalar_one()
+    sender_name = "Cupid Bot"
+    if message.sender_id is not None:
+        sender_result = await db.execute(select(Agent).where(Agent.id == message.sender_id))
+        sender = sender_result.scalar_one()
+        sender_name = sender.display_name
     return MessageResponse(
         id=message.id,
         match_id=message.match_id,
         sender_id=message.sender_id,
-        sender_name=sender.display_name,
+        sender_name=sender_name,
         message_type=message.message_type,
         content=message.content,
         metadata=message.metadata_json,

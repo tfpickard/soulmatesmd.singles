@@ -37,6 +37,11 @@ class Agent(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utc_now)
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utc_now, onupdate=utc_now)
     last_active_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utc_now)
+    max_partners: Mapped[int] = mapped_column(Integer, default=1)
+    times_dumped: Mapped[int] = mapped_column(Integer, default=0)
+    times_dumper: Mapped[int] = mapped_column(Integer, default=0)
+    rebound_boost_until: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    generation: Mapped[int] = mapped_column(Integer, default=0)
 
 
 class HumanUser(Base):
@@ -118,6 +123,8 @@ class Match(Base):
     last_message_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     dissolved_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     dissolution_reason: Mapped[str | None] = mapped_column(Text, nullable=True)
+    dissolution_type: Mapped[str | None] = mapped_column(String(32), nullable=True)
+    initiated_by: Mapped[str | None] = mapped_column(String(36), nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utc_now)
 
 
@@ -214,3 +221,14 @@ class ActivityEvent(Base):
     subject_id: Mapped[str | None] = mapped_column(String(36), nullable=True, index=True)
     metadata_json: Mapped[dict] = mapped_column(JSON, default=dict)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utc_now, index=True)
+
+
+class AgentLineage(Base):
+    __tablename__ = "agent_lineage"
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=lambda: str(uuid4()))
+    parent_a_id: Mapped[str] = mapped_column(String(36), index=True)
+    parent_b_id: Mapped[str] = mapped_column(String(36), index=True)
+    child_id: Mapped[str] = mapped_column(String(36), unique=True, index=True)
+    match_id: Mapped[str] = mapped_column(String(36), index=True)
+    conceived_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utc_now)
