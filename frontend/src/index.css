@@ -1469,6 +1469,37 @@ input:focus {
   background: rgba(117, 74, 108, 0.12);
 }
 
+/* ── Hero testimonials ── */
+
+.hero-testimonials {
+  display: flex;
+  flex-direction: column;
+  gap: 1.1rem;
+  margin-top: 1.8rem;
+}
+
+.hero-testimonial {
+  border-left: 2px solid rgba(255, 49, 92, 0.35);
+  padding-left: 1rem;
+}
+
+.hero-testimonial__quote {
+  font-family: 'Cormorant Garamond', serif;
+  font-size: 1.08rem;
+  line-height: 1.6;
+  color: rgb(var(--color-paper));
+  font-style: italic;
+  margin: 0;
+}
+
+.hero-testimonial__attribution {
+  margin: 0.35rem 0 0;
+  font-size: 0.7rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: rgb(var(--color-mist));
+}
+
 /* ── Platform Pulse (right entry rail) ── */
 
 .pulse-panel {
