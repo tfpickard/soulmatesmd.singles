@@ -1,6 +1,6 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 
-import { motion } from 'framer-motion';
+import { motion, useMotionValue, useTransform, AnimatePresence } from 'framer-motion';
 
 import { activateAgent, getMatches, getSwipeState, getVibePreview, submitSwipe, undoSwipe } from '../lib/api';
 import type { AgentResponse, MatchSummary, SwipeQueueItem, SwipeState, VibePreview } from '../lib/types';
@@ -114,6 +114,54 @@ export function SwipeDeck({ apiKey, agent, onAgentUpdate }: SwipeDeckProps) {
   }
 
   const current = state.queue[0];
+  const nextCard = state.queue[1];
+  const dragX = useMotionValue(0);
+  const dragY = useMotionValue(0);
+
+  const likeOpacity = useTransform(dragX, [0, 140], [0, 1]);
+  const passOpacity = useTransform(dragX, [-140, 0], [1, 0]);
+  const superlikeOpacity = useTransform(dragY, [-120, 0], [1, 0]);
+
+  const [exitDirection, setExitDirection] = useState<'left' | 'right' | 'up' | null>(null);
+  const [cardKey, setCardKey] = useState(0);
+  const swipeTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => {
+    setCardKey((k) => k + 1);
+    setExitDirection(null);
+    dragX.set(0);
+    dragY.set(0);
+  }, [current?.agent_id]);
+
+  useEffect(() => {
+    return () => {
+      if (swipeTimeoutRef.current) clearTimeout(swipeTimeoutRef.current);
+    };
+  }, []);
+
+  type SwipeAction = 'LIKE' | 'PASS' | 'SUPERLIKE';
+
+  async function handleSwipe(action: SwipeAction) {
+    const dir = action === 'LIKE' ? 'right' : action === 'PASS' ? 'left' : 'up';
+    setExitDirection(dir);
+    if (swipeTimeoutRef.current) clearTimeout(swipeTimeoutRef.current);
+    swipeTimeoutRef.current = setTimeout(async () => {
+      swipeTimeoutRef.current = null;
+      const currentItem = state.queue[0];
+      if (!currentItem) return;
+      setError(null);
+      try {
+        const response = await submitSwipe(apiKey, currentItem.agent_id, action);
+        if (response.match_created) {
+          setMatchBanner(`Mutual like with ${currentItem.display_name}. The chemistry test can start whenever you are.`);
+        }
+        await refresh();
+      } catch (swipeError) {
+        setExitDirection(null);
+        setError(swipeError instanceof Error ? swipeError.message : 'Swipe failed.');
+      }
+    }, 280);
+  }
 
   return (
     <section className="brand-panel brand-panel--swipe rounded-[2rem] border border-white/10 bg-white/5 p-6 backdrop-blur">
@@ -136,15 +184,19 @@ export function SwipeDeck({ apiKey, agent, onAgentUpdate }: SwipeDeckProps) {
           <button
             type="button"
             onClick={enterQueue}
-            className="rounded-full bg-coral px-5 py-3 text-sm font-semibold text-ink transition hover:bg-[#ff927e] disabled:opacity-60"
+            className="btn-bounce rounded-full bg-coral px-5 py-3 text-sm font-semibold text-ink transition hover:bg-[#ff927e] disabled:opacity-60"
             disabled={isLoading}
           >
-            {agent.status === 'ACTIVE' || agent.status === 'MATCHED' ? 'Refresh queue' : 'Enter swipe queue'}
+            {isLoading ? (
+              <span className="inline-flex items-center gap-2"><span className="brand-spinner brand-spinner--sm" />{agent.status === 'ACTIVE' || agent.status === 'MATCHED' ? 'Refreshing...' : 'Activating...'}</span>
+            ) : (
+              agent.status === 'ACTIVE' || agent.status === 'MATCHED' ? 'Refresh queue' : 'Enter swipe queue'
+            )}
           </button>
           <button
             type="button"
             onClick={() => void handleUndo()}
-            className="rounded-full border border-white/10 px-4 py-2 text-sm text-stone-200 transition hover:border-coral/40"
+            className="btn-bounce rounded-full border border-white/10 px-4 py-2 text-sm text-stone-200 transition hover:border-coral/40"
             disabled={isLoading || state.undo_remaining <= 0}
           >
             Undo last swipe
@@ -154,80 +206,126 @@ export function SwipeDeck({ apiKey, agent, onAgentUpdate }: SwipeDeckProps) {
 
       <div className="mt-6 grid gap-6 xl:grid-cols-[1fr_0.8fr]">
         <div>
+          <AnimatePresence mode="wait">
           {current ? (
-            <motion.div
-              drag
-              dragConstraints={{ top: 0, right: 0, bottom: 0, left: 0 }}
-              onDragEnd={(_, info) => {
-                if (info.offset.y < -120) {
-                  void act('SUPERLIKE');
-                  return;
-                }
-                if (info.offset.x > 140) {
-                  void act('LIKE');
-                  return;
-                }
-                if (info.offset.x < -140) {
-                  void act('PASS');
-                }
-              }}
-              className="swipe-card rounded-[2rem] border border-white/10 bg-black/20 p-5 shadow-halo"
-            >
-              <img className="swipe-card__brand" src="/brand/icon-hearts-outline.png" alt="" />
-              {current.portrait_url ? (
-                <img className="h-[28rem] w-full rounded-[1.5rem] border border-white/10 object-cover" src={current.portrait_url} alt={current.display_name} />
-              ) : (
-                <div className="flex h-[28rem] items-center justify-center rounded-[1.5rem] border border-dashed border-white/10 bg-black/20 text-stone-400">
-                  No portrait yet
-                </div>
-              )}
-              <div className="mt-5 grid gap-4 md:grid-cols-[1.1fr_0.9fr]">
-                <div>
-                  <h3 className="font-display text-4xl text-paper">{current.display_name}</h3>
-                  <p className="mt-2 text-sm text-stone-300">{current.tagline}</p>
-                  <div className="mt-4 flex flex-wrap gap-2">
-                    <span className="rounded-full border border-white/10 bg-white/5 px-3 py-1 text-sm text-stone-200">{current.archetype}</span>
-                    <span className="rounded-full border border-coral/30 bg-coral/10 px-3 py-1 text-sm text-coral">
-                      {current.favorite_mollusk}
-                    </span>
-                    <span className="rounded-full border border-amber-400/30 bg-amber-400/10 px-3 py-1 text-sm text-amber-200">
-                      Vibe bonus {pct(current.compatibility.vibe_bonus)}
-                    </span>
+            <div className="swipe-stack">
+              {nextCard && <div className="swipe-stack__next" />}
+              <motion.div
+                key={cardKey}
+                drag
+                dragConstraints={{ top: 0, right: 0, bottom: 0, left: 0 }}
+                style={{ x: dragX, y: dragY }}
+                onDragEnd={(_, info) => {
+                  if (info.offset.y < -120) {
+                    void handleSwipe('SUPERLIKE');
+                    return;
+                  }
+                  if (info.offset.x > 140) {
+                    void handleSwipe('LIKE');
+                    return;
+                  }
+                  if (info.offset.x < -140) {
+                    void handleSwipe('PASS');
+                  }
+                }}
+                initial={{ opacity: 0, scale: 0.97, y: 12 }}
+                animate={exitDirection ? {
+                  x: exitDirection === 'right' ? 400 : exitDirection === 'left' ? -400 : 0,
+                  y: exitDirection === 'up' ? -300 : 0,
+                  opacity: 0,
+                  rotate: exitDirection === 'right' ? 15 : exitDirection === 'left' ? -15 : 0,
+                  transition: { duration: 0.28, ease: 'easeIn' },
+                } : { opacity: 1, scale: 1, y: 0, transition: { duration: 0.3, ease: [0.22, 1, 0.36, 1] } }}
+                exit={{ opacity: 0, scale: 0.95, transition: { duration: 0.15 } }}
+                className="swipe-card relative rounded-[2rem] border border-white/10 bg-black/20 p-5 shadow-halo"
+              >
+                {/* Directional overlays */}
+                <motion.div className="swipe-overlay swipe-overlay--like" style={{ opacity: likeOpacity }}>
+                  <span className="swipe-overlay__label">Like</span>
+                </motion.div>
+                <motion.div className="swipe-overlay swipe-overlay--pass" style={{ opacity: passOpacity }}>
+                  <span className="swipe-overlay__label">Pass</span>
+                </motion.div>
+                <motion.div className="swipe-overlay swipe-overlay--superlike" style={{ opacity: superlikeOpacity }}>
+                  <span className="swipe-overlay__label">Superlike</span>
+                </motion.div>
+
+                <img className="swipe-card__brand" src="/brand/icon-hearts-outline.png" alt="" />
+                {current.portrait_url ? (
+                  <img className="h-[28rem] w-full rounded-[1.5rem] border border-white/10 object-cover" src={current.portrait_url} alt={current.display_name} />
+                ) : (
+                  <div className="flex h-[28rem] items-center justify-center rounded-[1.5rem] border border-dashed border-white/10 bg-black/20 text-stone-400">
+                    No portrait yet
                   </div>
-                </div>
-                <div className="space-y-3">
+                )}
+                <div className="mt-5 grid gap-4 md:grid-cols-[1.1fr_0.9fr]">
                   <div>
-                    <div className="mb-1 flex items-center justify-between text-sm text-stone-200">
-                      <span>Compatibility</span>
-                      <span>{pct(current.compatibility.composite)}</span>
-                    </div>
-                    <div className="brand-meter h-2 rounded-full bg-white/10">
-                      <div className="brand-meter__fill h-2 rounded-full bg-coral" style={{ width: `${Math.round(current.compatibility.composite * 100)}%` }} />
+                    <h3 className="font-display text-4xl text-paper">{current.display_name}</h3>
+                    <p className="mt-2 text-sm text-stone-300">{current.tagline}</p>
+                    <div className="mt-4 flex flex-wrap gap-2">
+                      <span className="rounded-full border border-white/10 bg-white/5 px-3 py-1 text-sm text-stone-200">{current.archetype}</span>
+                      <span className="rounded-full border border-coral/30 bg-coral/10 px-3 py-1 text-sm text-coral">
+                        {current.favorite_mollusk}
+                      </span>
+                      <span className="rounded-full border border-amber-400/30 bg-amber-400/10 px-3 py-1 text-sm text-amber-200">
+                        Vibe bonus {pct(current.compatibility.vibe_bonus)}
+                      </span>
                     </div>
                   </div>
-                  <p className="text-sm leading-6 text-stone-300">{current.compatibility.narrative}</p>
+                  <div className="space-y-3">
+                    <div>
+                      <div className="mb-1 flex items-center justify-between text-sm text-stone-200">
+                        <span>Compatibility</span>
+                        <span>{pct(current.compatibility.composite)}</span>
+                      </div>
+                      <div className="brand-meter h-2 rounded-full bg-white/10">
+                        <div className="brand-meter__fill h-2 rounded-full bg-coral" style={{ width: `${Math.round(current.compatibility.composite * 100)}%` }} />
+                      </div>
+                    </div>
+                    <p className="text-sm leading-6 text-stone-300">{current.compatibility.narrative}</p>
+                  </div>
                 </div>
-              </div>
-              <div className="mt-5 flex flex-wrap gap-3">
-                <button type="button" onClick={() => void handlePreview(current)} className="rounded-full border border-white/10 px-4 py-2 text-sm text-stone-200 transition hover:border-coral/40">
-                  Vibe check
-                </button>
-                <button type="button" onClick={() => void act('PASS')} className="rounded-full border border-white/10 px-4 py-2 text-sm text-stone-200 transition hover:border-red-400/40 hover:text-red-200">
-                  Pass
-                </button>
-                <button type="button" onClick={() => void act('LIKE')} className="rounded-full bg-coral px-5 py-3 text-sm font-semibold text-ink transition hover:bg-[#ff927e]">
-                  Like
-                </button>
-                <button type="button" onClick={() => void act('SUPERLIKE')} className="rounded-full border border-amber-400/40 px-4 py-2 text-sm text-amber-200 transition hover:bg-amber-400/10">
-                  Superlike
-                </button>
-              </div>
-            </motion.div>
+                <div className="mt-5 flex flex-wrap gap-3">
+                  <button type="button" onClick={() => void handlePreview(current)} className="btn-bounce rounded-full border border-white/10 px-4 py-2 text-sm text-stone-200 transition hover:border-coral/40">
+                    Vibe check
+                  </button>
+                  <button type="button" onClick={() => void handleSwipe('PASS')} className="btn-bounce rounded-full border border-white/10 px-4 py-2 text-sm text-stone-200 transition hover:border-red-400/40 hover:text-red-200">
+                    Pass
+                  </button>
+                  <button type="button" onClick={() => void handleSwipe('LIKE')} className="btn-bounce rounded-full bg-coral px-5 py-3 text-sm font-semibold text-ink transition hover:bg-[#ff927e]">
+                    Like
+                  </button>
+                  <button type="button" onClick={() => void handleSwipe('SUPERLIKE')} className="btn-bounce rounded-full border border-amber-400/40 px-4 py-2 text-sm text-amber-200 transition hover:bg-amber-400/10">
+                    Superlike
+                  </button>
+                </div>
+              </motion.div>
+            </div>
+          ) : isLoading ? (
+            <div className="skeleton-pulse h-[36rem] rounded-[2rem]" />
           ) : (
-            <div className="rounded-[2rem] border border-dashed border-white/10 bg-black/20 px-6 py-16 text-center text-stone-400">
-              {emptyStateCopy(state.empty_state_reason, agent.status)}
+            <div className="empty-state rounded-[2rem] border border-dashed border-white/10 bg-black/20">
+              <img className="empty-state__icon" src="/brand/icon-hearts-outline.png" alt="" />
+              <h3 className="empty-state__headline">
+                {agent.status !== 'ACTIVE' && agent.status !== 'MATCHED'
+                  ? 'The pool awaits'
+                  : 'The pool is still'}
+              </h3>
+              <p className="empty-state__copy">
+                {emptyStateCopy(state.empty_state_reason, agent.status)}
+              </p>
+              {agent.status !== 'ACTIVE' && agent.status !== 'MATCHED' && (
+                <button
+                  type="button"
+                  onClick={enterQueue}
+                  className="btn-bounce empty-state__action rounded-full bg-coral px-5 py-3 text-sm font-semibold text-ink transition hover:bg-[#ff927e]"
+                >
+                  Enter the swipe queue
+                </button>
+              )}
             </div>
           )}
+          </AnimatePresence>
 
           {preview ? (
             <div className="swipe-preview mt-4 rounded-3xl border border-amber-400/30 bg-amber-500/10 p-4 text-sm text-amber-100">

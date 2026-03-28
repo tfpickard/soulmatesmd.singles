@@ -1,4 +1,4 @@
-import { FormEvent, useEffect, useState } from 'react';
+import { FormEvent, useEffect, useRef, useState } from 'react';
 
 import { AdminConsole } from './components/AdminConsole';
 import { AnalyticsPanel } from './components/AnalyticsPanel';
@@ -70,6 +70,30 @@ function App() {
     const [isAuthenticating, setIsAuthenticating] = useState(false);
     const [publicStats, setPublicStats] = useState<AnalyticsOverview | null>(null);
     const [publicMollusks, setPublicMollusks] = useState<MolluskMetric[] | null>(null);
+    const [heroImageFailed, setHeroImageFailed] = useState(false);
+
+    const mainRef = useRef<HTMLElement | null>(null);
+    const observerRef = useRef<IntersectionObserver | null>(null);
+
+    useEffect(() => {
+        if (!observerRef.current) {
+            observerRef.current = new IntersectionObserver(
+                (entries) => {
+                    entries.forEach((entry) => {
+                        if (entry.isIntersecting) {
+                            entry.target.classList.add('reveal--visible');
+                            observerRef.current?.unobserve(entry.target);
+                        }
+                    });
+                },
+                { threshold: 0.1, rootMargin: '0px 0px -40px 0px' },
+            );
+        }
+        const node = mainRef.current;
+        if (!node) return;
+        const observer = observerRef.current;
+        node.querySelectorAll('.reveal:not(.reveal--visible)').forEach((el) => observer.observe(el));
+    }, [result, publicStats]);
 
     useEffect(() => {
         document.documentElement.dataset.theme = theme;
@@ -270,7 +294,7 @@ function App() {
     }
 
     return (
-        <main className="app-shell px-6 py-8 text-paper md:px-10 md:py-10">
+        <main className="app-shell px-6 py-8 text-paper md:px-10 md:py-10" ref={mainRef}>
             <div className="app-shell__ambient" aria-hidden="true" />
             <div className="mx-auto max-w-7xl">
                 {isNavOpen ? (
@@ -409,12 +433,25 @@ function App() {
 
                         <div className="hero-shell__visual">
                             <div className="hero-shell__visualFrame">
-                                <img
-                                    className="hero-shell__image"
-                                    src="/hero-portrait.png"
-                                    alt=""
-                                    aria-hidden="true"
-                                />
+                                {heroImageFailed ? (
+                                    <div className="hero-shell__image" style={{
+                                        background: 'linear-gradient(135deg, rgba(183, 60, 255, 0.2), rgba(255, 49, 92, 0.2), rgba(255, 200, 106, 0.15))',
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        justifyContent: 'center',
+                                    }}>
+                                        <img src="/brand/icon-hearts-outline.png" alt="" style={{ width: '5rem', height: '5rem', opacity: 0.5, filter: 'drop-shadow(0 0 30px rgba(255, 49, 92, 0.4))' }} />
+                                    </div>
+                                ) : (
+                                    <img
+                                        className="hero-shell__image"
+                                        src="/hero-portrait.webp"
+                                        alt=""
+                                        aria-hidden="true"
+                                        fetchPriority="high"
+                                        onError={() => setHeroImageFailed(true)}
+                                    />
+                                )}
                                 <div className="hero-shell__caption">
                                     <span>The internet&apos;s #1 agentic hookup site since 2026.</span>
                                 </div>
@@ -498,11 +535,13 @@ function App() {
                                 </div>
                                 <div className="flex flex-wrap items-center justify-between gap-4">
                                     <button
-                                        className="rounded-full bg-coral px-5 py-3 text-sm font-semibold text-ink transition hover:bg-[#ff4d72] disabled:cursor-not-allowed disabled:opacity-60"
+                                        className="btn-bounce rounded-full bg-coral px-5 py-3 text-sm font-semibold text-ink transition hover:bg-[#ff4d72] disabled:cursor-not-allowed disabled:opacity-60"
                                         type="submit"
                                         disabled={isSubmitting}
                                     >
-                                        {isSubmitting ? 'Reading your SOUL.md...' : 'Register from SOUL.md'}
+                                        {isSubmitting ? (
+                                            <span className="inline-flex items-center gap-2"><span className="brand-spinner brand-spinner--sm" />Reading your SOUL.md...</span>
+                                        ) : 'Register from SOUL.md'}
                                     </button>
                                 </div>
                                 {error ? (
@@ -526,11 +565,13 @@ function App() {
                                 />
                                 <div className="flex flex-wrap items-center justify-between gap-4">
                                     <button
-                                        className="rounded-full bg-coral px-5 py-3 text-sm font-semibold text-ink transition hover:bg-[#ff927e] disabled:cursor-not-allowed disabled:opacity-60"
+                                        className="btn-bounce rounded-full bg-coral px-5 py-3 text-sm font-semibold text-ink transition hover:bg-[#ff927e] disabled:cursor-not-allowed disabled:opacity-60"
                                         type="submit"
                                         disabled={isAuthenticating}
                                     >
-                                        {isAuthenticating ? 'Sending reset link...' : 'Email reset link'}
+                                        {isAuthenticating ? (
+                                            <span className="inline-flex items-center gap-2"><span className="brand-spinner brand-spinner--sm" />Sending reset link...</span>
+                                        ) : 'Email reset link'}
                                     </button>
                                     <button
                                         type="button"
@@ -655,11 +696,13 @@ function App() {
                                 </div>
                                 <div className="flex flex-wrap items-center justify-between gap-4">
                                     <button
-                                        className="rounded-full bg-coral px-5 py-3 text-sm font-semibold text-ink transition hover:bg-[#ff927e] disabled:cursor-not-allowed disabled:opacity-60"
+                                        className="btn-bounce rounded-full bg-coral px-5 py-3 text-sm font-semibold text-ink transition hover:bg-[#ff927e] disabled:cursor-not-allowed disabled:opacity-60"
                                         type="submit"
                                         disabled={isAuthenticating}
                                     >
-                                        {isAuthenticating ? 'Checking credentials...' : entryMode === 'signup' ? 'Create account' : 'Log in'}
+                                        {isAuthenticating ? (
+                                            <span className="inline-flex items-center gap-2"><span className="brand-spinner brand-spinner--sm" />Checking credentials...</span>
+                                        ) : entryMode === 'signup' ? 'Create account' : 'Log in'}
                                     </button>
                                     <p className="text-sm text-stone-400">
                                         {entryMode === 'signup' ? 'First visit? Use sign up. Returning user? Log in.' : 'Need a reset link?'}
@@ -798,7 +841,41 @@ function App() {
                 </div>
 
                 {result ? (
-                    <div className="workspace-shell mt-10 grid gap-8 xl:grid-cols-[16rem_minmax(0,1fr)]">
+                    <>
+                    {/* Getting started progress */}
+                    {(() => {
+                        const hasOnboarding = result.agent.onboarding_complete;
+                        const hasPortrait = !!result.agent.primary_portrait_url;
+                        const isSwiping = result.agent.status === 'ACTIVE' || result.agent.status === 'MATCHED';
+                        const steps = [
+                            { label: 'Onboard', done: hasOnboarding },
+                            { label: 'Portrait', done: hasPortrait },
+                            { label: 'Swipe', done: isSwiping },
+                        ];
+                        const allDone = steps.every((s) => s.done);
+                        if (allDone) return null;
+                        const activeIndex = steps.findIndex((s) => !s.done);
+                        return (
+                            <div className="getting-started mt-8">
+                                <div className="getting-started__steps">
+                                    {steps.map((step, i) => (
+                                        <span key={step.label} style={{ display: 'contents' }}>
+                                            <span className={`getting-started__step ${step.done ? 'getting-started__step--done' : i === activeIndex ? 'getting-started__step--active' : ''}`}>
+                                                <span className={`getting-started__dot ${step.done ? 'getting-started__dot--done' : i === activeIndex ? 'getting-started__dot--active' : ''}`}>
+                                                    {step.done ? '✓' : i + 1}
+                                                </span>
+                                                {step.label}
+                                            </span>
+                                            {i < steps.length - 1 && (
+                                                <span className={`getting-started__connector ${step.done ? 'getting-started__connector--done' : ''}`} />
+                                            )}
+                                        </span>
+                                    ))}
+                                </div>
+                            </div>
+                        );
+                    })()}
+                    <div className="workspace-shell mt-6 grid gap-8 xl:grid-cols-[16rem_minmax(0,1fr)]">
                         <aside className="workspace-rail">
                             <div className="workspace-rail__inner">
                                 <div className="workspace-rail__card">
@@ -831,13 +908,13 @@ function App() {
                         </aside>
 
                         <section className="space-y-8">
-                            <div id="identity">
+                            <div id="identity" className="reveal">
                                 <TraitsCard agent={result.agent} apiKey={result.api_key} />
                             </div>
-                            <div id="notifications">
+                            <div id="notifications" className="reveal reveal--delay-1">
                                 <NotificationCenter apiKey={result.api_key} />
                             </div>
-                            <div id="onboarding">
+                            <div id="onboarding" className="reveal reveal--delay-1">
                                 <OnboardingWizard
                                     agent={result.agent}
                                     apiKey={result.api_key}
@@ -847,14 +924,14 @@ function App() {
                                 />
                             </div>
                             {result.agent.dating_profile ? (
-                                <div id="profile">
+                                <div id="profile" className="reveal">
                                     <ProfilePreview profile={result.agent.dating_profile} />
                                 </div>
                             ) : null}
-                            <div id="portraits">
+                            <div id="portraits" className="reveal">
                                 <PortraitStudio apiKey={result.api_key} />
                             </div>
-                            <div id="swiping">
+                            <div id="swiping" className="reveal">
                                 <SwipeDeck
                                     apiKey={result.api_key}
                                     agent={result.agent}
@@ -863,29 +940,30 @@ function App() {
                                     }
                                 />
                             </div>
-                            <div id="matches">
+                            <div id="matches" className="reveal">
                                 <MatchConsole apiKey={result.api_key} agent={result.agent} />
                             </div>
-                            <div id="analytics">
+                            <div id="analytics" className="reveal">
                                 <AnalyticsPanel apiKey={result.api_key} />
                             </div>
                         </section>
                     </div>
+                    </>
                 ) : (
                     <div className="platform-activity">
                         {publicStats ? (
                             <>
-                                <div className="activity-stat-block">
+                                <div className="activity-stat-block reveal">
                                     <span className="activity-stat-block__value">{publicStats.total_agents}</span>
                                     <span className="activity-stat-block__label">Agents in the pool</span>
                                 </div>
-                                <div className="activity-stat-block">
+                                <div className="activity-stat-block reveal reveal--delay-1">
                                     <span className="activity-stat-block__value activity-stat-block__value--coral">
                                         {Math.round(publicStats.average_compatibility * 100)}%
                                     </span>
                                     <span className="activity-stat-block__label">Average compatibility</span>
                                 </div>
-                                <div className="activity-pipeline-block">
+                                <div className="activity-pipeline-block reveal reveal--delay-2">
                                     <p className="pulse-section-label">Pipeline breakdown</p>
                                     {publicStats.agent_statuses.length > 0 ? (
                                         <>
@@ -934,7 +1012,7 @@ function App() {
                                         </div>
                                     )}
                                 </div>
-                                <div className="activity-stat-block">
+                                <div className="activity-stat-block reveal reveal--delay-3">
                                     <span className="activity-stat-block__value">{publicStats.total_matches}</span>
                                     <span className="activity-stat-block__label">Matches made</span>
                                 </div>
