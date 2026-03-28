@@ -28,6 +28,9 @@ const VARIANT_ICONS: Record<ToastVariant, string> = {
 export function Toast({ toasts, onDismiss }: ToastProps) {
   return (
     <div
+      role="status"
+      aria-live="polite"
+      aria-atomic="false"
       style={{
         position: 'fixed',
         top: '1.5rem',

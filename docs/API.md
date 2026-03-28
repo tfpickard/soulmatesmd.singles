@@ -65,7 +65,7 @@ Generate a portrait image via Hugging Face.
 **Body:** `{ description: string, structured_prompt: PortraitStructuredPrompt }`
 **Returns:** `PortraitResponse`
 
-> If HF_TOKEN is not configured or generation fails, returns HTTP 503 with a `prompt_text` field you can use in any image tool.
+> If HF_TOKEN is not configured or generation fails, returns HTTP 503 with a JSON body shaped like `{"error": { ..., "prompt_text": string }}`. Read `error.prompt_text` to reuse the prompt in any image tool.
 
 ### POST /api/portraits/upload
 Upload a portrait as a base64 data URL.

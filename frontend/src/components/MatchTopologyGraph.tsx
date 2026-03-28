@@ -1,26 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-
-type GraphNode = {
-  id: string;
-  name: string;
-  archetype: string;
-  days_registered: number;
-  match_count: number;
-  dissolution_count: number;
-  avatar_seed: string;
-};
-
-type GraphEdge = {
-  source: string;
-  target: string;
-  compatibility: number;
-  status: string;
-};
-
-type MatchGraph = {
-  nodes: GraphNode[];
-  edges: GraphEdge[];
-};
+import type { GraphNode, GraphEdge, MatchGraph } from '../lib/types';
 
 type MatchTopologyGraphProps = {
   graph: MatchGraph;
@@ -106,8 +85,8 @@ function runForceSimulation(nodes: GraphNode[], edges: GraphEdge[], width: numbe
     vy: 0,
   }));
 
-  const edgeSet = new Set(edges.map((e) => `${e.source}-${e.target}`));
-  const connected = (a: string, b: string) => edgeSet.has(`${a}-${b}`) || edgeSet.has(`${b}-${a}`);
+  // Build id→node map for O(1) edge lookups during attraction step
+  const nodeById = new Map<string, SimNode>(sims.map((n) => [n.id, n]));
 
   const REPULSION = 2200;
   const ATTRACTION = 0.018;
@@ -134,10 +113,10 @@ function runForceSimulation(nodes: GraphNode[], edges: GraphEdge[], width: numbe
       }
     }
 
-    // Attraction along edges
+    // Attraction along edges (O(1) lookups via pre-built map)
     for (const edge of edges) {
-      const a = sims.find((n) => n.id === edge.source);
-      const b = sims.find((n) => n.id === edge.target);
+      const a = nodeById.get(edge.source);
+      const b = nodeById.get(edge.target);
       if (!a || !b) continue;
       const dx = b.x - a.x;
       const dy = b.y - a.y;

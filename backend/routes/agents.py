@@ -6,7 +6,7 @@ from fastapi import APIRouter, Depends, Header
 from sqlalchemy import select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from core.auth import api_key_prefix, generate_api_key, get_current_agent, get_current_user, hash_api_key, _token_digest
+from core.auth import api_key_prefix, generate_api_key, get_current_agent, hash_api_key, _token_digest
 from core.errors import AgentNotFound
 from database import get_db
 from models import Agent, AdminSession, HumanUser, Notification, utc_now

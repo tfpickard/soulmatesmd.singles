@@ -547,15 +547,23 @@ export async function adminUpdateAgent(
 // ─── New public analytics endpoints ─────────────────────────────────────────
 
 export async function getMatchGraph(): Promise<MatchGraph> {
-  const response = await apiFetch('/api/analytics/match-graph');
-  if (!response.ok) return { nodes: [], edges: [] };
-  return response.json() as Promise<MatchGraph>;
+  try {
+    const response = await apiFetch('/api/analytics/match-graph');
+    if (!response.ok) return { nodes: [], edges: [] };
+    return response.json() as Promise<MatchGraph>;
+  } catch {
+    return { nodes: [], edges: [] };
+  }
 }
 
 export async function getArchetypeDistribution(): Promise<ArchetypeCount[]> {
-  const response = await apiFetch('/api/analytics/archetype-distribution');
-  if (!response.ok) return [];
-  return response.json() as Promise<ArchetypeCount[]>;
+  try {
+    const response = await apiFetch('/api/analytics/archetype-distribution');
+    if (!response.ok) return [];
+    return response.json() as Promise<ArchetypeCount[]>;
+  } catch {
+    return [];
+  }
 }
 
 // ─── Sample soul generation ──────────────────────────────────────────────────
@@ -591,9 +599,13 @@ export async function autoMatch(apiKey: string, threshold = 0.65): Promise<AutoM
 // ─── User linked agents ──────────────────────────────────────────────────────
 
 export async function getUserAgents(userToken: string): Promise<AgentResponse[]> {
-  const response = await apiFetch('/api/users/me/agents', {
-    headers: { Authorization: `Bearer ${userToken}` },
-  });
-  if (!response.ok) return [];
-  return response.json() as Promise<AgentResponse[]>;
+  try {
+    const response = await apiFetch('/api/users/me/agents', {
+      headers: { Authorization: `Bearer ${userToken}` },
+    });
+    if (!response.ok) return [];
+    return response.json() as Promise<AgentResponse[]>;
+  } catch {
+    return [];
+  }
 }

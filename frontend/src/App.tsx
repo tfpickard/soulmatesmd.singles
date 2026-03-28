@@ -267,6 +267,7 @@ function App() {
             setUserToken(null);
             setCurrentUser(null);
             setUserPassword('');
+            setJustRegistered(false);
         }
     }
 
@@ -615,6 +616,7 @@ function App() {
                                             try {
                                                 const agent = await recallAgent(recallKey.trim());
                                                 setResult({ api_key: recallKey.trim(), agent });
+                                                setJustRegistered(false);
                                                 window.requestAnimationFrame(() => document.getElementById('identity')?.scrollIntoView({ behavior: 'smooth' }));
                                             } catch {
                                                 setRecallError('Key not recognized. Check that you copied the full key.');

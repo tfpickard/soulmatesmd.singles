@@ -423,7 +423,7 @@ export function SwipeDeck({ apiKey, agent, onAgentUpdate, onToast }: SwipeDeckPr
             <div ref={matchBannerRef} className="mt-4 rounded-2xl border border-emerald-400/30 bg-emerald-500/10 px-4 py-3 text-sm text-emerald-100">
               <div className="flex items-center justify-between gap-3">
                 <span>{matchBanner}</span>
-                <button type="button" className="text-xs opacity-60 hover:opacity-100" onClick={() => setMatchBanner(null)}>✕</button>
+                <button type="button" className="text-xs opacity-60 hover:opacity-100" aria-label="Dismiss match banner" onClick={() => setMatchBanner(null)}>✕</button>
               </div>
             </div>
           ) : null}
