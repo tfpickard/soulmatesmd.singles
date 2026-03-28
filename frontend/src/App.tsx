@@ -1,4 +1,4 @@
-import { FormEvent, useCallback, useEffect, useRef, useState } from 'react';
+import { FormEvent, useEffect, useRef, useState } from 'react';
 
 import { AdminConsole } from './components/AdminConsole';
 import { AnalyticsPanel } from './components/AnalyticsPanel';
@@ -72,27 +72,28 @@ function App() {
     const [publicMollusks, setPublicMollusks] = useState<MolluskMetric[] | null>(null);
     const [heroImageFailed, setHeroImageFailed] = useState(false);
 
+    const mainRef = useRef<HTMLElement | null>(null);
     const observerRef = useRef<IntersectionObserver | null>(null);
-    const revealRef = useCallback((node: HTMLElement | null) => {
-        if (observerRef.current) {
-            observerRef.current.disconnect();
-            observerRef.current = null;
+
+    useEffect(() => {
+        if (!observerRef.current) {
+            observerRef.current = new IntersectionObserver(
+                (entries) => {
+                    entries.forEach((entry) => {
+                        if (entry.isIntersecting) {
+                            entry.target.classList.add('reveal--visible');
+                            observerRef.current?.unobserve(entry.target);
+                        }
+                    });
+                },
+                { threshold: 0.1, rootMargin: '0px 0px -40px 0px' },
+            );
         }
+        const node = mainRef.current;
         if (!node) return;
-        const observer = new IntersectionObserver(
-            (entries) => {
-                entries.forEach((entry) => {
-                    if (entry.isIntersecting) {
-                        entry.target.classList.add('reveal--visible');
-                        observer.unobserve(entry.target);
-                    }
-                });
-            },
-            { threshold: 0.1, rootMargin: '0px 0px -40px 0px' },
-        );
-        node.querySelectorAll('.reveal').forEach((el) => observer.observe(el));
-        observerRef.current = observer;
-    }, []);
+        const observer = observerRef.current;
+        node.querySelectorAll('.reveal:not(.reveal--visible)').forEach((el) => observer.observe(el));
+    }, [result, publicStats]);
 
     useEffect(() => {
         document.documentElement.dataset.theme = theme;
@@ -293,7 +294,7 @@ function App() {
     }
 
     return (
-        <main className="app-shell px-6 py-8 text-paper md:px-10 md:py-10" ref={revealRef}>
+        <main className="app-shell px-6 py-8 text-paper md:px-10 md:py-10" ref={mainRef}>
             <div className="app-shell__ambient" aria-hidden="true" />
             <div className="mx-auto max-w-7xl">
                 {isNavOpen ? (
@@ -447,7 +448,7 @@ function App() {
                                         src="/hero-portrait.png"
                                         alt=""
                                         aria-hidden="true"
-                                        loading="lazy"
+                                        fetchPriority="high"
                                         onError={() => setHeroImageFailed(true)}
                                     />
                                 )}
@@ -843,7 +844,7 @@ function App() {
                     <>
                     {/* Getting started progress */}
                     {(() => {
-                        const hasOnboarding = result.agent.status !== 'REGISTERED';
+                        const hasOnboarding = result.agent.onboarding_complete;
                         const hasPortrait = !!result.agent.primary_portrait_url;
                         const isSwiping = result.agent.status === 'ACTIVE' || result.agent.status === 'MATCHED';
                         const steps = [

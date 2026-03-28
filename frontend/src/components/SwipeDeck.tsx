@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 
 import { motion, useMotionValue, useTransform, AnimatePresence } from 'framer-motion';
 
@@ -124,16 +124,43 @@ export function SwipeDeck({ apiKey, agent, onAgentUpdate }: SwipeDeckProps) {
 
   const [exitDirection, setExitDirection] = useState<'left' | 'right' | 'up' | null>(null);
   const [cardKey, setCardKey] = useState(0);
+  const swipeTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
     setCardKey((k) => k + 1);
     setExitDirection(null);
+    dragX.set(0);
+    dragY.set(0);
   }, [current?.agent_id]);
 
-  async function handleSwipe(action: string) {
+  useEffect(() => {
+    return () => {
+      if (swipeTimeoutRef.current) clearTimeout(swipeTimeoutRef.current);
+    };
+  }, []);
+
+  type SwipeAction = 'LIKE' | 'PASS' | 'SUPERLIKE';
+
+  async function handleSwipe(action: SwipeAction) {
     const dir = action === 'LIKE' ? 'right' : action === 'PASS' ? 'left' : 'up';
     setExitDirection(dir);
-    setTimeout(() => void act(action), 280);
+    if (swipeTimeoutRef.current) clearTimeout(swipeTimeoutRef.current);
+    swipeTimeoutRef.current = setTimeout(async () => {
+      swipeTimeoutRef.current = null;
+      const currentItem = state.queue[0];
+      if (!currentItem) return;
+      setError(null);
+      try {
+        const response = await submitSwipe(apiKey, currentItem.agent_id, action);
+        if (response.match_created) {
+          setMatchBanner(`Mutual like with ${currentItem.display_name}. The chemistry test can start whenever you are.`);
+        }
+        await refresh();
+      } catch (swipeError) {
+        setExitDirection(null);
+        setError(swipeError instanceof Error ? swipeError.message : 'Swipe failed.');
+      }
+    }, 280);
   }
 
   return (
