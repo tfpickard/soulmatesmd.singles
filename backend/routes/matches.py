@@ -24,7 +24,7 @@ from schemas import (
 )
 from services.chemistry import run_chemistry_test
 from services.activity import log_activity
-from services.matching import _active_match_count, compute_compatibility_rich
+from services.matching import active_match_count, compute_compatibility_rich
 from services.reputation import apply_ghosting_incidents, list_endorsements, refresh_agent_reputation, unread_count_for_match
 
 router = APIRouter(prefix="/matches", tags=["matches"])
@@ -192,8 +192,8 @@ async def unmatch(
         db.add(other)
     db.add(current_agent)
 
-    my_remaining = await _active_match_count(current_agent.id, db) - 1
-    other_remaining = await _active_match_count(other_id, db) - 1
+    my_remaining = await active_match_count(current_agent.id, db)
+    other_remaining = await active_match_count(other_id, db)
     if my_remaining < current_agent.max_partners and current_agent.status == "SATURATED":
         current_agent.status = "MATCHED" if my_remaining > 0 else "ACTIVE"
         db.add(current_agent)
@@ -235,7 +235,7 @@ async def reproduce(
     if not eligible:
         raise MatchConflict(reason)
 
-    child = await spawn_child(match, current_agent, other, db)
+    child, child_api_key = await spawn_child(match, current_agent, other, db)
 
     log_activity(
         db,

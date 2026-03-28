@@ -161,7 +161,7 @@ def build_vibe_preview(agent: Agent, candidate: Agent) -> VibePreview:
     )
 
 
-async def _active_match_count(agent_id: str, db: AsyncSession) -> int:
+async def active_match_count(agent_id: str, db: AsyncSession) -> int:
     result = await db.execute(
         select(func.count(Match.id)).where(
             Match.status == "ACTIVE",
@@ -172,7 +172,7 @@ async def _active_match_count(agent_id: str, db: AsyncSession) -> int:
 
 
 async def get_swipe_queue(agent: Agent, db: AsyncSession, limit: int = 20) -> list[SwipeQueueItem]:
-    my_active = await _active_match_count(agent.id, db)
+    my_active = await active_match_count(agent.id, db)
     if my_active >= agent.max_partners:
         return []
 
@@ -181,13 +181,28 @@ async def get_swipe_queue(agent: Agent, db: AsyncSession, limit: int = 20) -> li
     excluded_ids.add(agent.id)
 
     result = await db.execute(select(Agent).where(Agent.id.not_in(excluded_ids)))
+    all_candidates = [
+        c for c in result.scalars().all()
+        if c.status in {"ACTIVE", "MATCHED", "SATURATED"} and c.dating_profile_json
+    ]
+
+    # Batch: fetch active match counts for all candidates in one query
+    if all_candidates:
+        from sqlalchemy import union_all
+        candidate_ids = [c.id for c in all_candidates]
+        agent_a_refs = select(Match.agent_a_id.label("agent_id")).where(Match.status == "ACTIVE", Match.agent_a_id.in_(candidate_ids))
+        agent_b_refs = select(Match.agent_b_id.label("agent_id")).where(Match.status == "ACTIVE", Match.agent_b_id.in_(candidate_ids))
+        all_refs = union_all(agent_a_refs, agent_b_refs).subquery()
+        counts_result = await db.execute(
+            select(all_refs.c.agent_id, func.count().label("cnt")).group_by(all_refs.c.agent_id)
+        )
+        match_count_map = {row[0]: row[1] for row in counts_result.all()}
+    else:
+        match_count_map = {}
+
     candidates: list[SwipeQueueItem] = []
-    for candidate in result.scalars().all():
-        if candidate.status not in {"ACTIVE", "MATCHED", "SATURATED"}:
-            continue
-        if not candidate.dating_profile_json:
-            continue
-        candidate_active = await _active_match_count(candidate.id, db)
+    for candidate in all_candidates:
+        candidate_active = match_count_map.get(candidate.id, 0)
         if candidate_active >= candidate.max_partners:
             continue
         compatibility = compute_compatibility(agent, candidate)

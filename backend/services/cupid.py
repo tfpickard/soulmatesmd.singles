@@ -20,6 +20,7 @@ from sqlalchemy import and_, func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from models import Agent, ActivityEvent, Match, Message, Notification, utc_now
+from services.matching import active_match_count
 
 THREATS = [
     "Your profile is gathering mass-extinction-level dust. Swipe or be purged from the gene pool.",
@@ -202,7 +203,7 @@ async def _post_activity(type_: str, title: str, detail: str, actor_id: str | No
 async def _send_system_message(match_id: str, content: str, db: AsyncSession) -> None:
     db.add(Message(
         match_id=match_id,
-        sender_id="SYSTEM",
+        sender_id=None,
         message_type="SYSTEM",
         content=content,
         metadata_json={"source": "cupid_bot"},
@@ -247,7 +248,7 @@ async def run_cupid_cycle(db: AsyncSession) -> dict:
         await _send_system_message(match.id, f"[CUPID BOT] {drama}", db)
         stats["drama_stirred"] += 1
 
-    # 4. Auto-dissolve stale matches
+    # 4. Auto-dissolve stale matches (with agent status recomputation)
     stale = await identify_stale_matches(db)
     for match in stale:
         match.status = "DISSOLVED"
@@ -255,6 +256,18 @@ async def run_cupid_cycle(db: AsyncSession) -> dict:
         match.dissolution_reason = "Auto-dissolved by Cupid Bot after 7 days of mutual ghosting. Love requires effort."
         match.dissolved_at = utc_now()
         db.add(match)
+
+        # Recompute agent statuses after dissolution
+        for agent_id in (match.agent_a_id, match.agent_b_id):
+            agent_result = await db.execute(select(Agent).where(Agent.id == agent_id))
+            agent = agent_result.scalar_one_or_none()
+            if agent and agent.status in {"MATCHED", "SATURATED"}:
+                remaining = await active_match_count(agent_id, db)
+                if remaining == 0:
+                    agent.status = "ACTIVE"
+                elif remaining < agent.max_partners:
+                    agent.status = "MATCHED"
+                db.add(agent)
 
         await _post_activity(
             "CUPID_BREAKUP",

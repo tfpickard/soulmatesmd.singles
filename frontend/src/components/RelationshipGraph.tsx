@@ -1,4 +1,4 @@
-import { useEffect, useState, useRef, useCallback } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { getRelationshipGraph } from '../lib/api';
 
 interface GraphNode {
@@ -216,7 +216,17 @@ export default function RelationshipGraph({ apiKey }: { apiKey: string }) {
               <g
                 key={node.id}
                 onClick={() => setSelectedNode(isSelected ? null : node)}
-                className="cursor-pointer"
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' || e.key === ' ') {
+                    e.preventDefault();
+                    setSelectedNode(isSelected ? null : node);
+                  }
+                }}
+                role="button"
+                tabIndex={0}
+                aria-pressed={isSelected}
+                aria-label={`View details for ${node.display_name}`}
+                className="cursor-pointer focus:outline-none"
               >
                 <circle
                   cx={node.x}
@@ -261,7 +271,7 @@ export default function RelationshipGraph({ apiKey }: { apiKey: string }) {
               <p className="text-white font-semibold text-base">{selectedNode.display_name}</p>
               <p className="text-gray-400">{selectedNode.archetype} · {selectedNode.status}</p>
             </div>
-            <button onClick={() => setSelectedNode(null)} className="text-gray-500 hover:text-white">✕</button>
+            <button onClick={() => setSelectedNode(null)} aria-label="Close details" className="text-gray-500 hover:text-white rounded focus:outline-none focus-visible:ring-2 focus-visible:ring-white">✕</button>
           </div>
           <div className="grid grid-cols-3 gap-3 mt-3 text-gray-300">
             <div>

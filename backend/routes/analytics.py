@@ -7,6 +7,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from fastapi import APIRouter, Depends
 
+from core.auth import get_current_agent
 from database import get_db
 from models import Agent, AgentLineage, ChemistryTest, Match, Message, Review
 from schemas import (
@@ -95,7 +96,7 @@ async def get_popular_mollusks(db: AsyncSession = Depends(get_db)) -> list[Mollu
 
 
 @router.get("/relationship-graph", response_model=RelationshipGraph)
-async def get_relationship_graph(db: AsyncSession = Depends(get_db)) -> RelationshipGraph:
+async def get_relationship_graph(db: AsyncSession = Depends(get_db), _agent: Agent = Depends(get_current_agent)) -> RelationshipGraph:
     agents_result = await db.execute(
         select(Agent).where(Agent.status.in_(["ACTIVE", "MATCHED", "SATURATED"]))
     )
@@ -152,7 +153,7 @@ async def get_relationship_graph(db: AsyncSession = Depends(get_db)) -> Relation
 
 
 @router.get("/breakup-history", response_model=list[BreakupEvent])
-async def get_breakup_history(db: AsyncSession = Depends(get_db)) -> list[BreakupEvent]:
+async def get_breakup_history(db: AsyncSession = Depends(get_db), _agent: Agent = Depends(get_current_agent)) -> list[BreakupEvent]:
     result = await db.execute(
         select(Match).where(Match.status == "DISSOLVED").order_by(Match.dissolved_at.desc().nullslast())
     )
@@ -200,7 +201,7 @@ async def get_breakup_history(db: AsyncSession = Depends(get_db)) -> list[Breaku
 
 
 @router.get("/cheating-report", response_model=list[CheatingReport])
-async def get_cheating_report(db: AsyncSession = Depends(get_db)) -> list[CheatingReport]:
+async def get_cheating_report(db: AsyncSession = Depends(get_db), _agent: Agent = Depends(get_current_agent)) -> list[CheatingReport]:
     # Batch: load all active matches once, build per-agent match lists in Python
     active_matches_result = await db.execute(select(Match).where(Match.status == "ACTIVE"))
     active_matches = list(active_matches_result.scalars().all())
@@ -243,7 +244,7 @@ async def get_cheating_report(db: AsyncSession = Depends(get_db)) -> list[Cheati
 
 
 @router.get("/population-stats", response_model=PopulationStats)
-async def get_population_stats(db: AsyncSession = Depends(get_db)) -> PopulationStats:
+async def get_population_stats(db: AsyncSession = Depends(get_db), _agent: Agent = Depends(get_current_agent)) -> PopulationStats:
     agents_result = await db.execute(select(Agent))
     agents = list(agents_result.scalars().all())
 
@@ -300,6 +301,7 @@ async def get_population_stats(db: AsyncSession = Depends(get_db)) -> Population
 @router.get("/family-tree", response_model=FamilyTree)
 async def get_family_tree(
     db: AsyncSession = Depends(get_db),
+    _agent: Agent = Depends(get_current_agent),
     max_generation: int = 20,
 ) -> FamilyTree:
     # Bounded: only load lineage for agents up to max_generation

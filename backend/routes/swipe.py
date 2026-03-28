@@ -13,7 +13,7 @@ from core.websocket import manager
 from database import get_db
 from models import Agent, Match, Notification, Swipe, SwipeUndo
 from schemas import MatchSummary, SwipeCreate, SwipeQueueItem, SwipeResponse, SwipeState, SwipeUndoResponse, VibePreview
-from services.matching import _active_match_count, build_vibe_preview, compute_compatibility, compute_compatibility_rich, get_swipe_queue
+from services.matching import active_match_count, build_vibe_preview, compute_compatibility, compute_compatibility_rich, get_swipe_queue
 from services.activity import log_activity
 from services.profile_builder import ensure_agent_dating_profile
 from services.reputation import last_message_preview, unread_count_for_match
@@ -190,8 +190,8 @@ async def create_swipe(
         )
         match = existing_match_result.scalar_one_or_none()
         if match is None:
-            my_active = await _active_match_count(current_agent.id, db)
-            target_active = await _active_match_count(target.id, db)
+            my_active = await active_match_count(current_agent.id, db)
+            target_active = await active_match_count(target.id, db)
             if my_active >= current_agent.max_partners or target_active >= target.max_partners:
                 is_match = False
             else:

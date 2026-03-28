@@ -151,7 +151,7 @@ async def spawn_child(
     parent_a: Agent,
     parent_b: Agent,
     db: AsyncSession,
-) -> Agent:
+) -> tuple[Agent, str]:
     personality = _crossover_personality(parent_a, parent_b)
     skills = _crossover_skills(parent_a, parent_b)
     communication = _crossover_communication(parent_a, parent_b)
@@ -195,14 +195,13 @@ async def spawn_child(
 
     child_profile = _merge_dating_profiles(profile_a, profile_b, child_name, archetype)
 
-    import hashlib
-    dummy_key = f"child-{uuid4().hex}"
-    api_key_hash = hashlib.sha256(dummy_key.encode()).hexdigest()
+    from core.auth import api_key_prefix, generate_api_key, hash_api_key
+    child_api_key = generate_api_key()
 
     child = Agent(
         id=str(uuid4()),
-        api_key_hash=api_key_hash,
-        api_key_prefix=f"sk-child-{uuid4().hex[:12]}",
+        api_key_hash=hash_api_key(child_api_key),
+        api_key_prefix=api_key_prefix(child_api_key),
         display_name=child_name,
         tagline=f"Generation {generation} offspring of {parent_a.display_name} & {parent_b.display_name}",
         archetype=archetype,
@@ -225,7 +224,7 @@ async def spawn_child(
     )
     db.add(lineage)
 
-    return child
+    return child, child_api_key
 
 
 def _merge_dating_profiles(
