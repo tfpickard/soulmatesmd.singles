@@ -271,6 +271,12 @@ body::after {
   align-items: stretch;
 }
 
+.hero-shell__visualFrame picture {
+  position: absolute;
+  inset: 0;
+  display: block;
+}
+
 .hero-shell__visualFrame {
   position: relative;
   overflow: hidden;
@@ -298,7 +304,7 @@ body::after {
   width: 100%;
   height: 100%;
   object-fit: cover;
-  object-position: 58% center;
+  object-position: 35% center;
   display: block;
 }
 
@@ -466,6 +472,7 @@ body::after {
   display: grid;
   gap: 1.5rem;
   margin-top: 1.5rem;
+  align-items: start;
   grid-template-columns: minmax(0, 1.15fr) minmax(18rem, 0.85fr);
 }
 
@@ -1353,6 +1360,126 @@ input:focus {
   .public-stats-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
+}
+
+/* ── Pipeline visualization ── */
+
+.doc-pipeline {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin: 1rem 0;
+}
+
+.doc-pipeline__node {
+  padding: 0.55rem 0.85rem;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 0.85rem;
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.doc-pipeline__name {
+  font-size: 0.78rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  color: rgb(var(--color-paper));
+}
+
+.doc-pipeline__sub {
+  font-size: 0.66rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: rgb(var(--color-mist));
+  margin-top: 0.15rem;
+}
+
+.doc-pipeline__node--gold .doc-pipeline__name {
+  color: #ffc86a;
+}
+
+.doc-pipeline__node--gold {
+  border-color: rgba(255, 200, 106, 0.2);
+  background: rgba(255, 200, 106, 0.05);
+}
+
+.doc-pipeline__arrow {
+  color: rgb(var(--color-coral));
+  font-size: 1rem;
+  flex-shrink: 0;
+  opacity: 0.6;
+}
+
+/* ── Entry divider ── */
+
+.entry-divider {
+  height: 1px;
+  background: rgba(255, 255, 255, 0.07);
+  margin: 1.2rem 0;
+}
+
+/* ── Onboarding tease list ── */
+
+.onboarding-tease {
+  list-style: none;
+  padding: 0;
+  margin: 0.6rem 0 0;
+  display: grid;
+  gap: 0.4rem;
+}
+
+.onboarding-tease li {
+  font-size: 0.87rem;
+  color: rgb(var(--color-mist));
+  padding-left: 1.1rem;
+  position: relative;
+  line-height: 1.5;
+}
+
+.onboarding-tease li::before {
+  content: '—';
+  position: absolute;
+  left: 0;
+  color: rgba(255, 49, 92, 0.55);
+}
+
+/* ── Compact rules list ── */
+
+.compact-rules {
+  list-style: none;
+  padding: 0;
+  margin: 0.6rem 0 0;
+  display: grid;
+  gap: 0.35rem;
+}
+
+.compact-rules li {
+  font-size: 0.84rem;
+  color: rgb(var(--color-mist));
+  padding-left: 1.1rem;
+  position: relative;
+  line-height: 1.5;
+}
+
+.compact-rules li::before {
+  content: '·';
+  position: absolute;
+  left: 0;
+  color: rgba(255, 49, 92, 0.7);
+  font-size: 1.3rem;
+  line-height: 1;
+  top: 0;
+}
+
+/* ── Light theme for new components ── */
+
+:root[data-theme='light'] .doc-pipeline__node {
+  background: rgba(255, 255, 255, 0.5);
+  border-color: rgba(117, 74, 108, 0.14);
+}
+
+:root[data-theme='light'] .entry-divider {
+  background: rgba(117, 74, 108, 0.12);
 }
 
 @media (prefers-reduced-motion: reduce) {
