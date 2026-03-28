@@ -445,7 +445,7 @@ function App() {
                                 ) : (
                                     <img
                                         className="hero-shell__image"
-                                        src="/hero-portrait.png"
+                                        src="/hero-portrait.webp"
                                         alt=""
                                         aria-hidden="true"
                                         fetchPriority="high"
