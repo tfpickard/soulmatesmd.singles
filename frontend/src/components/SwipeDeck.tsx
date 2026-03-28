@@ -116,10 +116,10 @@ export function SwipeDeck({ apiKey, agent, onAgentUpdate }: SwipeDeckProps) {
   const current = state.queue[0];
 
   return (
-    <section className="rounded-[2rem] border border-white/10 bg-white/5 p-6 backdrop-blur">
+    <section className="brand-panel brand-panel--swipe rounded-[2rem] border border-white/10 bg-white/5 p-6 backdrop-blur">
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div>
-          <p className="text-sm uppercase tracking-[0.2em] text-coral">Phase 4 and 7 swiping</p>
+          <p className="brand-panel__eyebrow text-sm uppercase tracking-[0.2em] text-coral">Phase 4 and 7 swiping</p>
           <h2 className="mt-2 font-display text-3xl text-paper">Swipe Queue</h2>
           <p className="mt-2 max-w-2xl text-sm leading-6 text-stone-300">
             Activate your agent, browse compatibility-ranked candidates, preview the vibe, burn through superlikes,
@@ -127,10 +127,10 @@ export function SwipeDeck({ apiKey, agent, onAgentUpdate }: SwipeDeckProps) {
           </p>
         </div>
         <div className="flex flex-wrap items-center gap-3">
-          <div className="rounded-2xl border border-white/10 bg-black/20 px-4 py-3 text-sm text-stone-200">
+          <div className="swipe-stat rounded-2xl border border-white/10 bg-black/20 px-4 py-3 text-sm text-stone-200">
             Superlikes left: <span className="text-coral">{state.superlikes_remaining}</span>
           </div>
-          <div className="rounded-2xl border border-white/10 bg-black/20 px-4 py-3 text-sm text-stone-200">
+          <div className="swipe-stat rounded-2xl border border-white/10 bg-black/20 px-4 py-3 text-sm text-stone-200">
             Undo left: <span className="text-coral">{state.undo_remaining}</span>
           </div>
           <button
@@ -171,8 +171,9 @@ export function SwipeDeck({ apiKey, agent, onAgentUpdate }: SwipeDeckProps) {
                   void act('PASS');
                 }
               }}
-              className="rounded-[2rem] border border-white/10 bg-black/20 p-5 shadow-halo"
+              className="swipe-card rounded-[2rem] border border-white/10 bg-black/20 p-5 shadow-halo"
             >
+              <img className="swipe-card__brand" src="/brand/icon-hearts-outline.png" alt="" />
               {current.portrait_url ? (
                 <img className="h-[28rem] w-full rounded-[1.5rem] border border-white/10 object-cover" src={current.portrait_url} alt={current.display_name} />
               ) : (
@@ -200,8 +201,8 @@ export function SwipeDeck({ apiKey, agent, onAgentUpdate }: SwipeDeckProps) {
                       <span>Compatibility</span>
                       <span>{pct(current.compatibility.composite)}</span>
                     </div>
-                    <div className="h-2 rounded-full bg-white/10">
-                      <div className="h-2 rounded-full bg-coral" style={{ width: `${Math.round(current.compatibility.composite * 100)}%` }} />
+                    <div className="brand-meter h-2 rounded-full bg-white/10">
+                      <div className="brand-meter__fill h-2 rounded-full bg-coral" style={{ width: `${Math.round(current.compatibility.composite * 100)}%` }} />
                     </div>
                   </div>
                   <p className="text-sm leading-6 text-stone-300">{current.compatibility.narrative}</p>
@@ -229,7 +230,7 @@ export function SwipeDeck({ apiKey, agent, onAgentUpdate }: SwipeDeckProps) {
           )}
 
           {preview ? (
-            <div className="mt-4 rounded-3xl border border-amber-400/30 bg-amber-500/10 p-4 text-sm text-amber-100">
+            <div className="swipe-preview mt-4 rounded-3xl border border-amber-400/30 bg-amber-500/10 p-4 text-sm text-amber-100">
               <div className="flex items-center justify-between gap-3">
                 <p className="text-xs uppercase tracking-[0.18em] text-amber-200">Vibe check</p>
                 <button type="button" onClick={() => setPreview(null)} className="text-xs uppercase tracking-[0.16em] text-amber-200">
@@ -276,11 +277,11 @@ export function SwipeDeck({ apiKey, agent, onAgentUpdate }: SwipeDeckProps) {
         </div>
 
         <div className="space-y-4">
-          <div className="rounded-3xl border border-white/10 bg-black/10 p-4">
+          <div className="brand-subpanel rounded-3xl border border-white/10 bg-black/10 p-4">
             <p className="text-xs uppercase tracking-[0.18em] text-mist">Current matches</p>
             <div className="mt-3 space-y-3">
               {matches.map((match) => (
-                <div key={match.id} className="rounded-2xl border border-white/10 bg-white/5 p-4">
+                <div key={match.id} className="match-card rounded-2xl border border-white/10 bg-white/5 p-4">
                   <div className="flex items-center gap-3">
                     {match.other_agent_portrait_url ? (
                       <img className="h-14 w-14 rounded-2xl border border-white/10 object-cover" src={match.other_agent_portrait_url} alt={match.other_agent_name} />

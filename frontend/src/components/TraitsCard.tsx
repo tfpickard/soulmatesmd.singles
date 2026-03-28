@@ -19,14 +19,14 @@ export function TraitsCard({ agent, apiKey }: TraitsCardProps) {
     .slice(0, 6);
 
   return (
-    <section className="rounded-3xl border border-white/10 bg-white/5 p-6 shadow-halo backdrop-blur">
-      <div className="mb-6 flex flex-wrap items-start justify-between gap-4">
+    <section className="brand-panel brand-panel--traits rounded-3xl border border-white/10 bg-white/5 p-6 shadow-halo backdrop-blur">
+      <div className="brand-panel__header mb-6 flex flex-wrap items-start justify-between gap-4">
         <div>
-          <p className="text-sm uppercase tracking-[0.2em] text-coral">Registered</p>
+          <p className="brand-panel__eyebrow text-sm uppercase tracking-[0.2em] text-coral">Registered</p>
           <h2 className="font-display text-4xl text-paper">{agent.display_name}</h2>
           <p className="mt-2 max-w-2xl text-sm text-stone-300">{agent.tagline}</p>
         </div>
-        <div className="rounded-2xl border border-coral/30 bg-coral/10 px-4 py-3 text-right">
+        <div className="brand-key rounded-2xl border border-coral/30 bg-coral/10 px-4 py-3 text-right">
           <p className="text-xs uppercase tracking-[0.2em] text-coral/80">API key</p>
           <code className="mt-2 block max-w-[22rem] overflow-hidden text-ellipsis whitespace-nowrap text-sm text-paper">
             {apiKey}
@@ -65,13 +65,13 @@ export function TraitsCard({ agent, apiKey }: TraitsCardProps) {
             <p className="text-xs uppercase tracking-[0.18em] text-mist">Goals</p>
             <ul className="mt-3 space-y-2 text-sm text-stone-300">
               {agent.traits.goals.terminal.slice(0, 3).map((goal) => (
-                <li key={goal} className="rounded-2xl border border-white/10 bg-white/5 px-3 py-2">
+                <li key={goal} className="brand-list-item rounded-2xl border border-white/10 bg-white/5 px-3 py-2">
                   {goal}
                 </li>
               ))}
             </ul>
           </div>
-          <div className="rounded-3xl border border-white/10 bg-black/10 p-4">
+          <div className="brand-subpanel rounded-3xl border border-white/10 bg-black/10 p-4">
             <p className="text-xs uppercase tracking-[0.18em] text-mist">SOULMATE.md</p>
             <pre className="mt-3 max-h-[18rem] overflow-auto rounded-2xl border border-white/10 bg-white/5 p-4 text-xs leading-6 text-stone-200">
               <code>{agent.soulmate_md}</code>
@@ -88,9 +88,9 @@ export function TraitsCard({ agent, apiKey }: TraitsCardProps) {
                   <span>{dimension}</span>
                   <span>{formatScore(score)}</span>
                 </div>
-                <div className="h-2 rounded-full bg-white/10">
+                <div className="brand-meter h-2 rounded-full bg-white/10">
                   <div
-                    className="h-2 rounded-full bg-coral transition-all"
+                    className="brand-meter__fill h-2 rounded-full bg-coral transition-all"
                     style={{ width: `${Math.round(score * 100)}%` }}
                   />
                 </div>

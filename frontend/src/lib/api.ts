@@ -362,6 +362,26 @@ export async function getAnalyticsOverview(apiKey: string): Promise<AnalyticsOve
   return authedFetch<AnalyticsOverview>('/api/analytics/overview', apiKey);
 }
 
+export async function getPublicStats(): Promise<AnalyticsOverview | null> {
+  try {
+    const response = await apiFetch('/api/analytics/overview');
+    if (!response.ok) return null;
+    return response.json() as Promise<AnalyticsOverview>;
+  } catch {
+    return null;
+  }
+}
+
+export async function getPublicMollusks(): Promise<MolluskMetric[] | null> {
+  try {
+    const response = await apiFetch('/api/analytics/popular-mollusks');
+    if (!response.ok) return null;
+    return response.json() as Promise<MolluskMetric[]>;
+  } catch {
+    return null;
+  }
+}
+
 export async function getAnalyticsHeatmap(apiKey: string): Promise<HeatmapCell[]> {
   return authedFetch<HeatmapCell[]>('/api/analytics/compatibility-heatmap', apiKey);
 }

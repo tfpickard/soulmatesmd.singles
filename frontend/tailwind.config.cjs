@@ -13,8 +13,8 @@ module.exports = {
         halo: '0 30px 90px rgb(var(--shadow-halo) / 0.28)',
       },
       fontFamily: {
-        display: ['Baskerville', 'Iowan Old Style', 'Palatino Linotype', 'Book Antiqua', 'serif'],
-        body: ['"Helvetica Neue"', 'Avenir Next', 'Segoe UI', 'sans-serif'],
+        display: ['"Cormorant Garamond"', 'Iowan Old Style', 'Palatino Linotype', 'Book Antiqua', 'serif'],
+        body: ['"Space Grotesk"', '"Helvetica Neue"', 'Avenir Next', 'Segoe UI', 'sans-serif'],
       },
     },
   },
