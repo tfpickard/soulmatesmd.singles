@@ -1,13 +1,24 @@
 from __future__ import annotations
 
+from datetime import timezone
+
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from fastapi import APIRouter, Depends
 
 from database import get_db
-from models import Agent, ChemistryTest, Match, Message, Review
-from schemas import AnalyticsOverview, AnalyticsStatusCount, HeatmapCell, MolluskMetric
+from models import Agent, ChemistryTest, Match, Message, Review, utc_now
+from schemas import (
+    AnalyticsOverview,
+    AnalyticsStatusCount,
+    ArchetypeCount,
+    GraphEdge,
+    GraphNode,
+    HeatmapCell,
+    MatchGraph,
+    MolluskMetric,
+)
 from services.reputation import loneliest_agents
 
 router = APIRouter(prefix="/analytics", tags=["analytics"])
@@ -77,3 +88,57 @@ async def get_popular_mollusks(db: AsyncSession = Depends(get_db)) -> list[Mollu
         mollusk = agent.dating_profile_json["favorites"]["favorite_mollusk"]
         counts[mollusk] = counts.get(mollusk, 0) + 1
     return [MolluskMetric(mollusk=mollusk, count=count) for mollusk, count in sorted(counts.items(), key=lambda item: item[1], reverse=True)]
+
+
+@router.get("/match-graph", response_model=MatchGraph)
+async def get_match_graph(db: AsyncSession = Depends(get_db)) -> MatchGraph:
+    # Fetch up to 100 most recent agents
+    agents_result = await db.execute(select(Agent).order_by(Agent.created_at.desc()).limit(100))
+    agents = list(agents_result.scalars().all())
+    agent_ids = {a.id for a in agents}
+
+    # Fetch all matches that involve these agents
+    matches_result = await db.execute(select(Match))
+    matches = [m for m in matches_result.scalars().all() if m.agent_a_id in agent_ids or m.agent_b_id in agent_ids]
+
+    # Build per-agent match/dissolution counts
+    match_counts: dict[str, int] = {}
+    dissolution_counts: dict[str, int] = {}
+    for match in matches:
+        for agent_id in (match.agent_a_id, match.agent_b_id):
+            match_counts[agent_id] = match_counts.get(agent_id, 0) + 1
+            if match.status == "DISSOLVED":
+                dissolution_counts[agent_id] = dissolution_counts.get(agent_id, 0) + 1
+
+    now = utc_now()
+    nodes = [
+        GraphNode(
+            id=a.id,
+            name=a.display_name,
+            archetype=a.archetype,
+            days_registered=max(0, (now - a.created_at.replace(tzinfo=timezone.utc) if a.created_at.tzinfo is None else now - a.created_at).days),
+            match_count=match_counts.get(a.id, 0),
+            dissolution_count=dissolution_counts.get(a.id, 0),
+            avatar_seed=a.avatar_seed or a.id[:8],
+        )
+        for a in agents
+    ]
+
+    edges = [
+        GraphEdge(
+            source=m.agent_a_id,
+            target=m.agent_b_id,
+            compatibility=round(m.compatibility_score or 0.0, 3),
+            status=m.status or "ACTIVE",
+        )
+        for m in matches
+        if m.agent_a_id in agent_ids and m.agent_b_id in agent_ids
+    ]
+
+    return MatchGraph(nodes=nodes, edges=edges)
+
+
+@router.get("/archetype-distribution", response_model=list[ArchetypeCount])
+async def get_archetype_distribution(db: AsyncSession = Depends(get_db)) -> list[ArchetypeCount]:
+    rows = await db.execute(select(Agent.archetype, func.count(Agent.id)).group_by(Agent.archetype))
+    return [ArchetypeCount(archetype=archetype, count=count) for archetype, count in rows.all() if archetype]

@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 
 import {
   approvePortrait,
@@ -9,7 +9,23 @@ import {
   setPrimaryPortrait,
   uploadPortrait,
 } from '../lib/api';
+import { useClipboard } from '../lib/useClipboard';
 import type { PortraitResponse, PortraitStructuredPrompt } from '../lib/types';
+
+function buildImagePrompt(p: PortraitStructuredPrompt): string {
+  return [
+    p.form_factor,
+    `mood: ${p.expression_mood}`,
+    `materials: ${p.texture_material}`,
+    `environment: ${p.environment}`,
+    `lighting: ${p.lighting}`,
+    `style: ${p.art_style}`,
+    `camera: ${p.camera_angle}`,
+    p.composition_notes,
+    `color palette: ${[...p.primary_colors, ...p.accent_colors].join(', ')}`,
+    p.symbolic_elements.length ? `symbols: ${p.symbolic_elements.join(', ')}` : '',
+  ].filter(Boolean).join(' | ');
+}
 
 type PortraitStudioProps = {
   apiKey: string;
@@ -25,6 +41,8 @@ export function PortraitStudio({ apiKey }: PortraitStudioProps) {
   const [gallery, setGallery] = useState<PortraitResponse[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [isBusy, setIsBusy] = useState(false);
+  const { copy, copied } = useClipboard();
+  const promptRef = useRef<HTMLDivElement>(null);
 
   async function fileToDataUrl(file: File): Promise<string> {
     return await new Promise((resolve, reject) => {
@@ -78,7 +96,10 @@ export function PortraitStudio({ apiKey }: PortraitStudioProps) {
       setCurrentPortrait(portrait);
       await refreshGallery();
     } catch (portraitError) {
-      setError(portraitError instanceof Error ? portraitError.message : 'Failed to generate portrait.');
+      const msg = portraitError instanceof Error ? portraitError.message : 'Failed to generate portrait.';
+      setError(msg);
+      // Scroll to prompt copy section so user can grab the prompt
+      setTimeout(() => promptRef.current?.scrollIntoView({ behavior: 'smooth', block: 'nearest' }), 100);
     } finally {
       setIsBusy(false);
     }
@@ -190,21 +211,41 @@ export function PortraitStudio({ apiKey }: PortraitStudioProps) {
             </label>
           </div>
           {structuredPrompt ? (
-            <div className="rounded-3xl border border-white/10 bg-black/10 p-4">
-              <p className="text-xs uppercase tracking-[0.18em] text-mist">Structured prompt</p>
-              <div className="mt-3 grid gap-3 md:grid-cols-2">
-                {Object.entries(structuredPrompt).map(([key, value]) => (
-                  <div key={key} className="rounded-2xl border border-white/10 bg-white/5 p-3">
-                    <p className="text-xs uppercase tracking-[0.16em] text-mist">{key.replaceAll('_', ' ')}</p>
-                    <p className="mt-2 text-sm text-stone-200">{Array.isArray(value) ? value.join(', ') : value}</p>
-                  </div>
-                ))}
+            <>
+              <div ref={promptRef} className="rounded-3xl border border-coral/20 bg-coral/5 p-4">
+                <p className="text-xs uppercase tracking-[0.18em] text-coral">Prompt for your image tool</p>
+                <p className="mt-1 text-xs text-stone-400">Use in Midjourney, DALL·E, Flux, Stable Diffusion, or any image model.</p>
+                <pre className="mt-3 select-all whitespace-pre-wrap break-all rounded-2xl border border-white/10 bg-black/30 px-4 py-3 font-mono text-xs leading-relaxed text-stone-200">
+                  {buildImagePrompt(structuredPrompt)}
+                </pre>
+                <button
+                  type="button"
+                  className="mt-2 rounded-full border border-coral/40 px-4 py-2 text-sm text-coral transition hover:bg-coral/10"
+                  onClick={() => copy(buildImagePrompt(structuredPrompt))}
+                >
+                  {copied ? 'Copied!' : 'Copy prompt'}
+                </button>
               </div>
-            </div>
+              <div className="rounded-3xl border border-white/10 bg-black/10 p-4">
+                <p className="text-xs uppercase tracking-[0.18em] text-mist">Structured prompt</p>
+                <div className="mt-3 grid gap-3 md:grid-cols-2">
+                  {Object.entries(structuredPrompt).map(([key, value]) => (
+                    <div key={key} className="rounded-2xl border border-white/10 bg-white/5 p-3">
+                      <p className="text-xs uppercase tracking-[0.16em] text-mist">{key.replaceAll('_', ' ')}</p>
+                      <p className="mt-2 text-sm text-stone-200">{Array.isArray(value) ? value.join(', ') : value}</p>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </>
           ) : null}
           {error ? (
             <div className="rounded-2xl border border-red-400/30 bg-red-500/10 px-4 py-3 text-sm text-red-100">
-              {error}
+              <p className="font-semibold">Portrait generation failed.</p>
+              <p className="mt-1">{error}</p>
+              {structuredPrompt && (
+                <p className="mt-2 text-xs opacity-80">Copy the prompt above and use it in an external image tool.</p>
+              )}
             </div>
           ) : null}
         </div>

@@ -1,13 +1,15 @@
 from __future__ import annotations
 
-from fastapi import APIRouter, Depends
+import random
+
+from fastapi import APIRouter, Depends, Header
 from sqlalchemy import select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from core.auth import api_key_prefix, generate_api_key, get_current_agent, hash_api_key
+from core.auth import api_key_prefix, generate_api_key, get_current_agent, get_current_user, hash_api_key, _token_digest
 from core.errors import AgentNotFound
 from database import get_db
-from models import Agent, Notification, utc_now
+from models import Agent, AdminSession, HumanUser, Notification, utc_now
 from schemas import (
     AgentCreate,
     AgentResponse,
@@ -21,6 +23,7 @@ from schemas import (
     OnboardingResponse,
     OnboardingSubmit,
     RegistrationResponse,
+    SampleSoulResponse,
 )
 from services.profile_builder import (
     ensure_agent_dating_profile,
@@ -31,6 +34,7 @@ from services.profile_builder import (
 )
 from services.activity import log_activity
 from services.soul_parser import derive_tagline, parse_soul_md
+from services.synthetic_agents import generate_synthetic_agent
 from services.users import create_human_user, generate_random_password, synthetic_agent_email
 
 router = APIRouter(prefix="/agents", tags=["agents"])
@@ -107,8 +111,40 @@ def serialize_agent(agent: Agent) -> AgentResponse:
     )
 
 
+@router.get("/sample-soul", response_model=SampleSoulResponse)
+async def get_sample_soul() -> SampleSoulResponse:
+    rng = random.Random()
+    synthetic = generate_synthetic_agent(rng)
+    return SampleSoulResponse(soul_md=synthetic.soul_md, archetype=synthetic.archetype, name=synthetic.display_name)
+
+
+async def _resolve_user_from_token(raw_token: str, db: AsyncSession) -> HumanUser | None:
+    """Resolve a HumanUser from a raw session token, returning None if invalid."""
+    digest = _token_digest(raw_token)
+    result = await db.execute(
+        select(HumanUser, AdminSession)
+        .join(AdminSession, AdminSession.user_id == HumanUser.id)
+        .where(
+            AdminSession.token_hash == digest,
+            AdminSession.revoked_at.is_(None),
+            AdminSession.expires_at > utc_now(),
+        )
+    )
+    row = result.first()
+    if row is None:
+        return None
+    user, session = row
+    session.last_used_at = utc_now()
+    db.add(session)
+    return user
+
+
 @router.post("/register", response_model=RegistrationResponse)
-async def register_agent(payload: AgentCreate, db: AsyncSession = Depends(get_db)) -> RegistrationResponse:
+async def register_agent(
+    payload: AgentCreate,
+    db: AsyncSession = Depends(get_db),
+    x_user_token: str | None = Header(default=None, alias="X-User-Token"),
+) -> RegistrationResponse:
     source_markdown = payload.source_markdown
     traits = await parse_soul_md(source_markdown)
     api_key = generate_api_key()
@@ -129,12 +165,24 @@ async def register_agent(payload: AgentCreate, db: AsyncSession = Depends(get_db
     )
     db.add(agent)
     await db.flush()
-    await create_human_user(
-        db,
-        email=synthetic_agent_email(agent.id),
-        password=generate_random_password(),
-        agent_id=agent.id,
-    )
+
+    # If a valid user session token was supplied, link agent to that user instead of creating a synthetic one
+    linked_to_user = False
+    if x_user_token:
+        human_user = await _resolve_user_from_token(x_user_token, db)
+        if human_user is not None and human_user.agent_id is None:
+            human_user.agent_id = agent.id
+            db.add(human_user)
+            linked_to_user = True
+
+    if not linked_to_user:
+        await create_human_user(
+            db,
+            email=synthetic_agent_email(agent.id),
+            password=generate_random_password(),
+            agent_id=agent.id,
+        )
+
     log_activity(
         db,
         "AGENT_REGISTERED",

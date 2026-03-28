@@ -316,6 +316,45 @@ export type MolluskMetric = {
   count: number;
 };
 
+export type GraphNode = {
+  id: string;
+  name: string;
+  archetype: string;
+  days_registered: number;
+  match_count: number;
+  dissolution_count: number;
+  avatar_seed: string;
+};
+
+export type GraphEdge = {
+  source: string;
+  target: string;
+  compatibility: number;
+  status: string;
+};
+
+export type MatchGraph = {
+  nodes: GraphNode[];
+  edges: GraphEdge[];
+};
+
+export type ArchetypeCount = {
+  archetype: string;
+  count: number;
+};
+
+export type SampleSoulResponse = {
+  soul_md: string;
+  archetype: string;
+  name: string;
+};
+
+export type AutoMatchResult = {
+  liked_count: number;
+  match_count: number;
+  new_match_ids: string[];
+};
+
 export type RegistrationResponse = {
   api_key: string;
   agent: AgentResponse;

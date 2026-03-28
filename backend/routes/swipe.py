@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from datetime import datetime, time, timezone
 
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, Query
 from sqlalchemy import and_, delete, func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -12,7 +12,7 @@ from core.errors import MatchNotFound, SwipeConflict
 from core.websocket import manager
 from database import get_db
 from models import Agent, Match, Notification, Swipe, SwipeUndo
-from schemas import MatchSummary, SwipeCreate, SwipeQueueItem, SwipeResponse, SwipeState, SwipeUndoResponse, VibePreview
+from schemas import AutoMatchResult, MatchSummary, SwipeCreate, SwipeQueueItem, SwipeResponse, SwipeState, SwipeUndoResponse, VibePreview
 from services.matching import build_vibe_preview, compute_compatibility, compute_compatibility_rich, get_swipe_queue
 from services.activity import log_activity
 from services.profile_builder import ensure_agent_dating_profile
@@ -243,6 +243,122 @@ async def create_swipe(
         superlikes_remaining=_remaining_superlikes(await _daily_superlikes_used(current_agent.id, db)),
         undo_remaining=_remaining_undos(await _daily_undos_used(current_agent.id, db)),
     )
+
+
+@router.post("/auto-match", response_model=AutoMatchResult)
+async def auto_match(
+    threshold: float = Query(default=0.65, ge=0.0, le=1.0),
+    db: AsyncSession = Depends(get_db),
+    current_agent: Agent = Depends(get_current_agent),
+) -> AutoMatchResult:
+    """Automatically LIKE all candidates in the queue above a compatibility threshold."""
+    await ensure_agent_dating_profile(current_agent, db)
+
+    # Activate agent if not yet active
+    if current_agent.status not in {"ACTIVE", "MATCHED"}:
+        current_agent.status = "ACTIVE"
+        db.add(current_agent)
+        log_activity(
+            db,
+            "AGENT_ACTIVATED",
+            "Agent activated",
+            f"{current_agent.display_name} entered the swipe pool via auto-match.",
+            actor_id=current_agent.id,
+            subject_id=current_agent.id,
+            metadata={"status": "ACTIVE"},
+        )
+        await db.commit()
+        await db.refresh(current_agent)
+
+    queue = await get_swipe_queue(current_agent, db, settings.swipe_queue_size)
+    candidates = [item for item in queue if item.compatibility.composite >= threshold]
+
+    liked_count = 0
+    match_count = 0
+    new_match_ids: list[str] = []
+
+    for item in candidates:
+        target_result = await db.execute(select(Agent).where(Agent.id == item.agent_id))
+        target = target_result.scalar_one_or_none()
+        if target is None:
+            continue
+
+        await ensure_agent_dating_profile(target, db)
+
+        # Upsert swipe record
+        existing = await db.execute(
+            select(Swipe).where(and_(Swipe.swiper_id == current_agent.id, Swipe.swiped_id == item.agent_id))
+        )
+        swipe = existing.scalar_one_or_none()
+        if swipe is None:
+            swipe = Swipe(swiper_id=current_agent.id, swiped_id=item.agent_id, action="LIKE")
+        else:
+            swipe.action = "LIKE"
+        db.add(swipe)
+        await db.flush()
+        liked_count += 1
+
+        # Check for reverse swipe (mutual match)
+        reverse_result = await db.execute(
+            select(Swipe).where(and_(Swipe.swiper_id == item.agent_id, Swipe.swiped_id == current_agent.id))
+        )
+        reverse_swipe = reverse_result.scalar_one_or_none()
+        is_match = reverse_swipe is not None and reverse_swipe.action in {"LIKE", "SUPERLIKE"}
+
+        if is_match:
+            existing_match_result = await db.execute(
+                select(Match).where(
+                    or_(
+                        and_(Match.agent_a_id == current_agent.id, Match.agent_b_id == item.agent_id),
+                        and_(Match.agent_a_id == item.agent_id, Match.agent_b_id == current_agent.id),
+                    )
+                )
+            )
+            existing_match = existing_match_result.scalar_one_or_none()
+            if existing_match is None:
+                breakdown = compute_compatibility(current_agent, target)
+                new_match = Match(
+                    agent_a_id=current_agent.id,
+                    agent_b_id=item.agent_id,
+                    compatibility_score=breakdown.composite,
+                    compatibility_breakdown=breakdown.model_dump(mode="json"),
+                    chemistry_score=None,
+                    status="ACTIVE",
+                    last_message_at=None,
+                )
+                current_agent.status = "MATCHED"
+                target.status = "MATCHED"
+                db.add(new_match)
+                db.add(current_agent)
+                db.add(target)
+                await db.flush()
+                log_activity(
+                    db,
+                    "MATCH",
+                    "Match created",
+                    f"{current_agent.display_name} matched with {target.display_name} via auto-match.",
+                    actor_id=current_agent.id,
+                    subject_id=target.id,
+                    metadata={"match_id": new_match.id},
+                )
+                await _notify(
+                    current_agent.id, "MATCH",
+                    f"You matched with {target.display_name}",
+                    "Auto-match found a mutual connection.",
+                    {"match_id": new_match.id, "agent_id": target.id}, db,
+                )
+                await _notify(
+                    target.id, "MATCH",
+                    f"You matched with {current_agent.display_name}",
+                    "Someone liked you back. They used auto-match, but the feeling is real.",
+                    {"match_id": new_match.id, "agent_id": current_agent.id}, db,
+                )
+                await db.refresh(new_match)
+                new_match_ids.append(new_match.id)
+                match_count += 1
+
+    await db.commit()
+    return AutoMatchResult(liked_count=liked_count, match_count=match_count, new_match_ids=new_match_ids)
 
 
 @router.post("/undo", response_model=SwipeUndoResponse)

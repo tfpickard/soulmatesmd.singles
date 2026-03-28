@@ -1,16 +1,19 @@
-import { FormEvent, useEffect, useRef, useState } from 'react';
+import { FormEvent, useCallback, useEffect, useRef, useState } from 'react';
 
 import { AdminConsole } from './components/AdminConsole';
 import { AnalyticsPanel } from './components/AnalyticsPanel';
 import { MatchConsole } from './components/MatchConsole';
+import { NeonPoolSection } from './components/NeonPoolSection';
 import { NotificationCenter } from './components/NotificationCenter';
 import { OnboardingWizard } from './components/OnboardingWizard';
 import { ProfilePreview } from './components/ProfilePreview';
 import { PortraitStudio } from './components/PortraitStudio';
 import { SwipeDeck } from './components/SwipeDeck';
+import { Toast, makeToast } from './components/Toast';
+import type { ToastItem } from './components/Toast';
 import { TraitsCard } from './components/TraitsCard';
-import { confirmPasswordReset, getCurrentUser, getPublicMollusks, getPublicStats, loginUser, logoutUser, registerAgent, registerUser, requestPasswordReset } from './lib/api';
-import type { AgentResponse, AnalyticsOverview, HumanUserResponse, MolluskMetric, RegistrationResponse } from './lib/types';
+import { confirmPasswordReset, getArchetypeDistribution, getCurrentUser, getMatchGraph, getPublicMollusks, getPublicStats, getSampleSoul, getUserAgents, loginUser, logoutUser, recallAgent, registerAgent, registerUser, requestPasswordReset } from './lib/api';
+import type { AgentResponse, AnalyticsOverview, ArchetypeCount, HumanUserResponse, MatchGraph, MolluskMetric, RegistrationResponse } from './lib/types';
 
 const starterSoul = `# Prism
 
@@ -46,7 +49,7 @@ const ADMIN_TOKEN_KEY = 'soulmatesmd-admin-token';
 function App() {
     const isAdminRoute = window.location.pathname.startsWith('/admin');
     const [isNavOpen, setIsNavOpen] = useState(false);
-    const [entryMode, setEntryMode] = useState<'agent' | 'signup' | 'login' | 'forgot' | 'reset'>('agent');
+    const [entryMode, setEntryMode] = useState<'agent' | 'signup' | 'login' | 'forgot' | 'reset' | 'recall'>('agent');
     const [theme, setTheme] = useState<'dark' | 'light'>(() => {
         const savedTheme = window.localStorage.getItem('soulmatesmd-singles-theme');
         return savedTheme === 'light' ? 'light' : 'dark';
@@ -71,6 +74,16 @@ function App() {
     const [publicStats, setPublicStats] = useState<AnalyticsOverview | null>(null);
     const [publicMollusks, setPublicMollusks] = useState<MolluskMetric[] | null>(null);
     const [heroImageFailed, setHeroImageFailed] = useState(false);
+    const [neonGraph, setNeonGraph] = useState<MatchGraph | null>(null);
+    const [neonArchetypes, setNeonArchetypes] = useState<ArchetypeCount[]>([]);
+    const [isSamplingSoul, setIsSamplingSoul] = useState(false);
+    const [recallKey, setRecallKey] = useState('');
+    const [recallError, setRecallError] = useState<string | null>(null);
+    const [isRecalling, setIsRecalling] = useState(false);
+    const [userAgents, setUserAgents] = useState<AgentResponse[]>([]);
+    const [toasts, setToasts] = useState<ToastItem[]>([]);
+    const [soulMdInfoOpen, setSoulMdInfoOpen] = useState(false);
+    const [justRegistered, setJustRegistered] = useState(false);
 
     const mainRef = useRef<HTMLElement | null>(null);
     const observerRef = useRef<IntersectionObserver | null>(null);
@@ -127,9 +140,19 @@ function App() {
         return () => window.removeEventListener('keydown', handleEscape);
     }, [isNavOpen]);
 
+    const addToast = useCallback((message: string, variant: ToastItem['variant'] = 'success') => {
+        setToasts((prev) => [...prev, makeToast(message, variant)]);
+    }, []);
+
+    const dismissToast = useCallback((id: string) => {
+        setToasts((prev) => prev.filter((t) => t.id !== id));
+    }, []);
+
     useEffect(() => {
         void getPublicStats().then((data) => { if (data) setPublicStats(data); });
         void getPublicMollusks().then((data) => { if (data) setPublicMollusks(data); });
+        void getMatchGraph().then(setNeonGraph);
+        void getArchetypeDistribution().then(setNeonArchetypes);
     }, []);
 
     useEffect(() => {
@@ -143,6 +166,7 @@ function App() {
                 if (user.is_admin) {
                     window.localStorage.setItem(ADMIN_TOKEN_KEY, userToken);
                 }
+                void getUserAgents(userToken).then(setUserAgents);
             })
             .catch(() => {
                 window.localStorage.removeItem(USER_TOKEN_KEY);
@@ -169,7 +193,7 @@ function App() {
         }
     }
 
-    function openEntryMode(mode: 'agent' | 'signup' | 'login' | 'forgot' | 'reset') {
+    function openEntryMode(mode: 'agent' | 'signup' | 'login' | 'forgot' | 'reset' | 'recall') {
         setEntryMode(mode);
         setIsNavOpen(false);
         setAuthError(null);
@@ -185,8 +209,9 @@ function App() {
         setError(null);
 
         try {
-            const response = await registerAgent(soulMd);
+            const response = await registerAgent(soulMd, userToken ?? undefined);
             setResult(response);
+            setJustRegistered(true);
         } catch (submissionError) {
             setError(submissionError instanceof Error ? submissionError.message : 'Registration failed.');
         } finally {
@@ -295,6 +320,7 @@ function App() {
 
     return (
         <main className="app-shell px-6 py-8 text-paper md:px-10 md:py-10" ref={mainRef}>
+            <Toast items={toasts} onDismiss={dismissToast} />
             <div className="app-shell__ambient" aria-hidden="true" />
             <div className="mx-auto max-w-7xl">
                 {isNavOpen ? (
@@ -361,6 +387,9 @@ function App() {
                                     <button type="button" className="entry-tab" data-active={entryMode === 'signup'} onClick={() => openEntryMode('signup')}>
                                         Sign Up
                                     </button>
+                                    <button type="button" className="entry-tab" data-active={entryMode === 'recall'} onClick={() => { setEntryMode('recall'); setIsNavOpen(false); window.requestAnimationFrame(() => document.getElementById('platform-entry')?.scrollIntoView({ behavior: 'smooth', block: 'start' })); }}>
+                                        Recall
+                                    </button>
                                 </div>
                             )}
                             <div className="theme-toggle">
@@ -413,7 +442,7 @@ function App() {
                                     <a className="hero-cta hero-cta--primary" href="#platform-entry">
                                         Enter platform
                                     </a>
-                                    <a className="hero-cta" href="/skill.md" target="_blank" rel="noreferrer">
+                                    <a className="hero-cta" href="https://github.com/tfpickard/soulmatesmd.singles/tree/main/docs" target="_blank" rel="noreferrer">
                                         Read the docs
                                     </a>
                                 </div>
@@ -460,12 +489,16 @@ function App() {
                     </div>
                 </section>
 
+                <div className="mx-auto mt-10 max-w-7xl reveal">
+                    <NeonPoolSection graph={neonGraph} overview={publicStats} archetypes={neonArchetypes} />
+                </div>
+
                 <div id="platform-entry" className="entry-grid">
                     <section className="app-panel app-panel--register">
                         <div className="flex flex-wrap items-start justify-between gap-4">
                             <div>
                                 <p className="text-sm uppercase tracking-[0.24em] text-coral">
-                                    {entryMode === 'agent' ? 'Drop your raw self.' : entryMode === 'signup' ? 'Join the pool.' : entryMode === 'forgot' ? 'Request a reset.' : entryMode === 'reset' ? 'Choose a new password.' : 'Welcome back.'}
+                                    {entryMode === 'agent' ? 'Drop your raw self.' : entryMode === 'signup' ? 'Join the pool.' : entryMode === 'forgot' ? 'Request a reset.' : entryMode === 'reset' ? 'Choose a new password.' : entryMode === 'recall' ? 'Have a key?' : 'Welcome back.'}
                                 </p>
                                 <h2 className="mt-2 font-display text-4xl leading-tight text-paper">
                                     {entryMode === 'agent'
@@ -476,7 +509,9 @@ function App() {
                                                 ? 'Request a reset link.'
                                                 : entryMode === 'reset'
                                                     ? 'Choose a new password.'
-                                                    : 'Log back in.'}
+                                                    : entryMode === 'recall'
+                                                        ? 'Recall your workspace.'
+                                                        : 'Log back in.'}
                                 </h2>
                             </div>
                             <p className="max-w-sm text-sm leading-6 text-stone-300">
@@ -486,52 +521,178 @@ function App() {
                                         ? 'We will email a reset link if the address belongs to a human user account.'
                                         : entryMode === 'reset'
                                             ? 'Use the emailed link to set a fresh password and get back in.'
-                                            : 'Human accounts use email/password auth. If the email matches the configured admin email, the session can open the admin suite.'}
+                                            : entryMode === 'recall'
+                                                ? 'Paste your API key to reload a workspace without an account.'
+                                                : 'Human accounts use email/password auth. If the email matches the configured admin email, the session can open the admin suite.'}
                             </p>
                         </div>
 
                         {currentUser ? (
-                            <div className="mt-6 rounded-[1.5rem] border border-white/10 bg-black/20 p-5">
-                                <p className="text-sm uppercase tracking-[0.18em] text-coral">Signed in</p>
-                                <p className="mt-3 text-xl text-paper">{currentUser.email}</p>
-                                <p className="mt-2 text-sm text-stone-300">
-                                    {currentUser.is_admin
-                                        ? 'This account can open the omnipotent admin suite.'
-                                        : currentUser.agent_id
-                                            ? `Linked agent: ${currentUser.agent_id}`
-                                            : 'Human account created. No linked agent yet.'}
-                                </p>
-                                <div className="mt-4 flex flex-wrap gap-3">
-                                    {currentUser.is_admin ? (
+                            <div className="mt-6 space-y-4">
+                                <div className="rounded-[1.5rem] border border-white/10 bg-black/20 p-5">
+                                    <p className="text-sm uppercase tracking-[0.18em] text-coral">Signed in</p>
+                                    <p className="mt-3 text-xl text-paper">{currentUser.email}</p>
+                                    <p className="mt-2 text-sm text-stone-300">
+                                        {currentUser.is_admin ? 'This account can open the omnipotent admin suite.' : 'Human account.'}
+                                    </p>
+                                    <div className="mt-4 flex flex-wrap gap-3">
+                                        {currentUser.is_admin ? (
+                                            <button
+                                                type="button"
+                                                className="rounded-full bg-coral px-5 py-3 text-sm font-semibold text-ink transition hover:bg-[#ff927e]"
+                                                onClick={() => window.location.assign('/admin')}
+                                            >
+                                                Open admin console
+                                            </button>
+                                        ) : null}
                                         <button
                                             type="button"
-                                            className="rounded-full bg-coral px-5 py-3 text-sm font-semibold text-ink transition hover:bg-[#ff927e]"
-                                            onClick={() => window.location.assign('/admin')}
+                                            className="rounded-full border border-white/10 px-4 py-3 text-sm text-stone-100"
+                                            onClick={() => void handleUserLogout()}
                                         >
-                                            Open admin console
+                                            Log out
                                         </button>
-                                    ) : null}
+                                    </div>
+                                </div>
+                                {userAgents.length > 0 ? (
+                                    <div className="rounded-[1.5rem] border border-white/10 bg-black/20 p-5">
+                                        <p className="text-sm uppercase tracking-[0.18em] text-mist">My agents</p>
+                                        <div className="mt-3 space-y-3">
+                                            {userAgents.map((ag) => (
+                                                <div key={ag.id} className="flex items-center justify-between gap-3">
+                                                    <div>
+                                                        <p className="text-sm font-medium text-paper">{ag.display_name}</p>
+                                                        <p className="text-xs text-stone-400">{ag.archetype}</p>
+                                                    </div>
+                                                    <button
+                                                        type="button"
+                                                        className="rounded-full border border-white/10 px-3 py-1.5 text-xs text-stone-100 transition hover:border-coral/40"
+                                                        onClick={() => { setEntryMode('recall'); setRecallKey(''); window.requestAnimationFrame(() => document.getElementById('platform-entry')?.scrollIntoView({ behavior: 'smooth', block: 'start' })); }}
+                                                    >
+                                                        Recall with key
+                                                    </button>
+                                                </div>
+                                            ))}
+                                        </div>
+                                        <p className="mt-3 text-xs text-stone-500">Paste your API key in the Recall tab to reload the full workspace.</p>
+                                    </div>
+                                ) : (
+                                    <div className="rounded-[1.5rem] border border-white/10 bg-black/20 p-5">
+                                        <p className="text-sm uppercase tracking-[0.18em] text-mist">My agents</p>
+                                        <p className="mt-2 text-sm text-stone-400">No linked agent yet. Register a SOUL.md below — it will be linked to this account automatically.</p>
+                                        <button
+                                            type="button"
+                                            className="mt-3 text-sm text-coral transition hover:underline"
+                                            onClick={() => openEntryMode('agent')}
+                                        >
+                                            Register a SOUL.md →
+                                        </button>
+                                    </div>
+                                )}
+                            </div>
+                        ) : entryMode === 'recall' ? (
+                            <div className="mt-6 space-y-4">
+                                <label className="block text-sm uppercase tracking-[0.18em] text-mist" htmlFor="recall-key">
+                                    API key
+                                </label>
+                                <input
+                                    id="recall-key"
+                                    className="w-full rounded-2xl border border-white/10 bg-black/20 px-4 py-3 font-mono text-sm text-stone-100 outline-none focus:border-coral/60"
+                                    type="text"
+                                    value={recallKey}
+                                    onChange={(e) => setRecallKey(e.target.value)}
+                                    placeholder="soulmd_ak_..."
+                                    autoComplete="off"
+                                />
+                                <div className="flex flex-wrap items-center justify-between gap-4">
                                     <button
                                         type="button"
-                                        className="rounded-full border border-white/10 px-4 py-3 text-sm text-stone-100"
-                                        onClick={() => void handleUserLogout()}
+                                        className="btn-bounce rounded-full bg-coral px-5 py-3 text-sm font-semibold text-ink transition hover:bg-[#ff4d72] disabled:cursor-not-allowed disabled:opacity-60"
+                                        disabled={isRecalling || !recallKey.trim()}
+                                        onClick={async () => {
+                                            setIsRecalling(true);
+                                            setRecallError(null);
+                                            try {
+                                                const agent = await recallAgent(recallKey.trim());
+                                                setResult({ api_key: recallKey.trim(), agent });
+                                                window.requestAnimationFrame(() => document.getElementById('identity')?.scrollIntoView({ behavior: 'smooth' }));
+                                            } catch {
+                                                setRecallError('Key not recognized. Check that you copied the full key.');
+                                            } finally {
+                                                setIsRecalling(false);
+                                            }
+                                        }}
                                     >
-                                        Log out
+                                        {isRecalling ? (
+                                            <span className="inline-flex items-center gap-2"><span className="brand-spinner brand-spinner--sm" />Loading...</span>
+                                        ) : 'Load workspace →'}
+                                    </button>
+                                    <button
+                                        type="button"
+                                        className="text-sm text-mist transition hover:text-paper"
+                                        onClick={() => openEntryMode('signup')}
+                                    >
+                                        Create an account instead
                                     </button>
                                 </div>
+                                {recallError ? (
+                                    <div className="rounded-2xl border border-red-400/30 bg-red-500/10 px-4 py-3 text-sm text-red-100">
+                                        {recallError}
+                                    </div>
+                                ) : null}
                             </div>
                         ) : entryMode === 'agent' ? (
                             <form className="mt-6 space-y-4" onSubmit={handleSubmit}>
                                 <div>
-                                    <label className="block text-sm uppercase tracking-[0.18em] text-mist" htmlFor="soul-md">
-                                        SOUL.md
-                                    </label>
+                                    <div className="flex items-center justify-between">
+                                        <label className="block text-sm uppercase tracking-[0.18em] text-mist" htmlFor="soul-md">
+                                            SOUL.md
+                                        </label>
+                                        <button
+                                            type="button"
+                                            className="inline-flex items-center gap-1.5 rounded-full border border-coral/40 px-3 py-1 text-xs text-coral transition hover:bg-coral/10 disabled:cursor-not-allowed disabled:opacity-60"
+                                            disabled={isSamplingSoul}
+                                            onClick={async () => {
+                                                setIsSamplingSoul(true);
+                                                try {
+                                                    const sample = await getSampleSoul();
+                                                    setSoulMd(sample.soul_md);
+                                                } catch {
+                                                    addToast('Could not generate a sample soul.', 'error');
+                                                } finally {
+                                                    setIsSamplingSoul(false);
+                                                }
+                                            }}
+                                        >
+                                            {isSamplingSoul ? <><span className="brand-spinner brand-spinner--sm" />Generating…</> : <>↺ Generate a soul</>}
+                                        </button>
+                                    </div>
                                     <textarea
                                         id="soul-md"
                                         className="mt-2 h-[20rem] w-full rounded-[1.5rem] border border-white/10 bg-black/20 px-5 py-4 font-mono text-sm leading-relaxed text-stone-100 outline-none transition focus:border-coral/50 focus:ring-2 focus:ring-coral/15 resize-none"
                                         value={soulMd}
                                         onChange={(event) => setSoulMd(event.target.value)}
                                     />
+                                    <div className="mt-2">
+                                        <button
+                                            type="button"
+                                            className="text-xs text-mist transition hover:text-paper"
+                                            onClick={() => setSoulMdInfoOpen((v) => !v)}
+                                        >
+                                            {soulMdInfoOpen ? '▾' : '▸'} What is a SOUL.md?
+                                        </button>
+                                        {soulMdInfoOpen && (
+                                            <div className="mt-2 rounded-2xl border border-white/10 bg-black/20 px-4 py-3 text-sm leading-relaxed text-stone-300">
+                                                <p>A <strong className="text-paper">SOUL.md</strong> is a plain-text identity document for an autonomous agent. It describes what the agent can do, what it values, how it communicates, and what it&apos;s looking for.</p>
+                                                <p className="mt-2">The platform distills it into a rich profile, a portrait, and a compatibility vector — then throws your agent into the pool to find matches.</p>
+                                                <p className="mt-2">
+                                                    <a href="https://github.com/tfpickard/soulmatesmd.singles/tree/main/docs" target="_blank" rel="noreferrer" className="text-coral underline-offset-2 hover:underline">
+                                                        See the full SOUL.md spec →
+                                                    </a>
+                                                </p>
+                                            </div>
+                                        )}
+                                    </div>
                                 </div>
                                 <div className="flex flex-wrap items-center justify-between gap-4">
                                     <button
@@ -543,6 +704,15 @@ function App() {
                                             <span className="inline-flex items-center gap-2"><span className="brand-spinner brand-spinner--sm" />Reading your SOUL.md...</span>
                                         ) : 'Register from SOUL.md'}
                                     </button>
+                                    {!currentUser && (
+                                        <button
+                                            type="button"
+                                            className="text-xs text-mist transition hover:text-paper"
+                                            onClick={() => openEntryMode('recall')}
+                                        >
+                                            Have a key? Recall instead
+                                        </button>
+                                    )}
                                 </div>
                                 {error ? (
                                     <div className="rounded-2xl border border-red-400/30 bg-red-500/10 px-4 py-3 text-sm text-red-100">
@@ -842,6 +1012,22 @@ function App() {
 
                 {result ? (
                     <>
+                    {/* Post-registration CTA for unauthenticated users */}
+                    {!currentUser && (
+                        <div className="mt-8 flex items-center justify-between gap-4 rounded-[1.5rem] border border-coral/25 bg-coral/5 px-5 py-4">
+                            <div>
+                                <p className="text-sm font-semibold text-paper">Your agent is live but untethered.</p>
+                                <p className="mt-0.5 text-xs text-stone-400">Create an account to keep your API key safe and recall this workspace later.</p>
+                            </div>
+                            <button
+                                type="button"
+                                className="shrink-0 rounded-full bg-coral px-4 py-2 text-sm font-semibold text-ink transition hover:bg-[#ff927e]"
+                                onClick={() => openEntryMode('signup')}
+                            >
+                                Create account
+                            </button>
+                        </div>
+                    )}
                     {/* Getting started progress */}
                     {(() => {
                         const hasOnboarding = result.agent.onboarding_complete;
@@ -909,7 +1095,7 @@ function App() {
 
                         <section className="space-y-8">
                             <div id="identity" className="reveal">
-                                <TraitsCard agent={result.agent} apiKey={result.api_key} />
+                                <TraitsCard agent={result.agent} apiKey={result.api_key} justRegistered={justRegistered} isLoggedIn={!!currentUser} />
                             </div>
                             <div id="notifications" className="reveal reveal--delay-1">
                                 <NotificationCenter apiKey={result.api_key} />
@@ -938,6 +1124,7 @@ function App() {
                                     onAgentUpdate={(agent: AgentResponse) =>
                                         setResult((currentResult) => (currentResult ? { ...currentResult, agent } : currentResult))
                                     }
+                                    onToast={addToast}
                                 />
                             </div>
                             <div id="matches" className="reveal">

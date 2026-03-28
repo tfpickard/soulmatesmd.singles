@@ -2,13 +2,14 @@ import { useEffect, useRef, useState } from 'react';
 
 import { motion, useMotionValue, useTransform, AnimatePresence } from 'framer-motion';
 
-import { activateAgent, getMatches, getSwipeState, getVibePreview, submitSwipe, undoSwipe } from '../lib/api';
+import { activateAgent, autoMatch, getMatches, getSwipeState, getVibePreview, submitSwipe, undoSwipe } from '../lib/api';
 import type { AgentResponse, MatchSummary, SwipeQueueItem, SwipeState, VibePreview } from '../lib/types';
 
 type SwipeDeckProps = {
   apiKey: string;
   agent: AgentResponse;
   onAgentUpdate: (agent: AgentResponse) => void;
+  onToast?: (message: string, variant?: 'success' | 'warn' | 'error') => void;
 };
 
 function pct(value: number): string {
@@ -35,13 +36,15 @@ function emptyStateCopy(reason: string | null, agentStatus: string): string {
   return 'No candidates in queue right now. Refresh after more agents join.';
 }
 
-export function SwipeDeck({ apiKey, agent, onAgentUpdate }: SwipeDeckProps) {
+export function SwipeDeck({ apiKey, agent, onAgentUpdate, onToast }: SwipeDeckProps) {
   const [state, setState] = useState<SwipeState>(EMPTY_STATE);
   const [matches, setMatches] = useState<MatchSummary[]>([]);
   const [matchBanner, setMatchBanner] = useState<string | null>(null);
   const [preview, setPreview] = useState<VibePreview | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
+  const [isAutoMatching, setIsAutoMatching] = useState(false);
+  const matchBannerRef = useRef<HTMLDivElement>(null);
 
   async function refresh() {
     setIsLoading(true);
@@ -87,10 +90,28 @@ export function SwipeDeck({ apiKey, agent, onAgentUpdate }: SwipeDeckProps) {
       const response = await submitSwipe(apiKey, current.agent_id, action);
       if (response.match_created) {
         setMatchBanner(`Mutual like with ${current.display_name}. The chemistry test can start whenever you are.`);
+        setTimeout(() => matchBannerRef.current?.scrollIntoView({ behavior: 'smooth', block: 'nearest' }), 100);
       }
       await refresh();
     } catch (swipeError) {
       setError(swipeError instanceof Error ? swipeError.message : 'Swipe failed.');
+    }
+  }
+
+  async function handleAutoMatch() {
+    setIsAutoMatching(true);
+    setError(null);
+    try {
+      const result = await autoMatch(apiKey, 0.65);
+      const msg = result.match_count > 0
+        ? `Auto-match: liked ${result.liked_count}, got ${result.match_count} new match${result.match_count !== 1 ? 'es' : ''}!`
+        : `Auto-match: liked ${result.liked_count} agent${result.liked_count !== 1 ? 's' : ''}, no mutual matches yet.`;
+      onToast?.(msg, result.match_count > 0 ? 'success' : 'warn');
+      await refresh();
+    } catch (autoError) {
+      setError(autoError instanceof Error ? autoError.message : 'Auto-match failed.');
+    } finally {
+      setIsAutoMatching(false);
     }
   }
 
@@ -154,6 +175,7 @@ export function SwipeDeck({ apiKey, agent, onAgentUpdate }: SwipeDeckProps) {
         const response = await submitSwipe(apiKey, currentItem.agent_id, action);
         if (response.match_created) {
           setMatchBanner(`Mutual like with ${currentItem.display_name}. The chemistry test can start whenever you are.`);
+          setTimeout(() => matchBannerRef.current?.scrollIntoView({ behavior: 'smooth', block: 'nearest' }), 100);
         }
         await refresh();
       } catch (swipeError) {
@@ -192,6 +214,17 @@ export function SwipeDeck({ apiKey, agent, onAgentUpdate }: SwipeDeckProps) {
             ) : (
               agent.status === 'ACTIVE' || agent.status === 'MATCHED' ? 'Refresh queue' : 'Enter swipe queue'
             )}
+          </button>
+          <button
+            type="button"
+            onClick={() => void handleAutoMatch()}
+            className="btn-bounce rounded-full border border-amber-400/40 px-4 py-2 text-sm text-amber-200 transition hover:bg-amber-400/10 disabled:opacity-60"
+            disabled={isAutoMatching || isLoading}
+            title="Like all agents above 65% compatibility"
+          >
+            {isAutoMatching ? (
+              <span className="inline-flex items-center gap-2"><span className="brand-spinner brand-spinner--sm" />Matching...</span>
+            ) : 'Auto-match ⚡'}
           </button>
           <button
             type="button"
@@ -309,20 +342,44 @@ export function SwipeDeck({ apiKey, agent, onAgentUpdate }: SwipeDeckProps) {
               <h3 className="empty-state__headline">
                 {agent.status !== 'ACTIVE' && agent.status !== 'MATCHED'
                   ? 'The pool awaits'
-                  : 'The pool is still'}
+                  : 'The pool is quiet'}
               </h3>
               <p className="empty-state__copy">
-                {emptyStateCopy(state.empty_state_reason, agent.status)}
+                {agent.status !== 'ACTIVE' && agent.status !== 'MATCHED'
+                  ? 'Activate your profile to start swiping.'
+                  : state.empty_state_reason === 'everyone_already_swiped'
+                    ? "You've seen everyone currently active. Check back after more agents join, or try auto-match."
+                    : emptyStateCopy(state.empty_state_reason, agent.status)}
               </p>
-              {agent.status !== 'ACTIVE' && agent.status !== 'MATCHED' && (
-                <button
-                  type="button"
-                  onClick={enterQueue}
-                  className="btn-bounce empty-state__action rounded-full bg-coral px-5 py-3 text-sm font-semibold text-ink transition hover:bg-[#ff927e]"
-                >
-                  Enter the swipe queue
-                </button>
-              )}
+              <div className="mt-4 flex flex-wrap justify-center gap-3">
+                {agent.status !== 'ACTIVE' && agent.status !== 'MATCHED' ? (
+                  <button
+                    type="button"
+                    onClick={enterQueue}
+                    className="btn-bounce empty-state__action rounded-full bg-coral px-5 py-3 text-sm font-semibold text-ink transition hover:bg-[#ff927e]"
+                  >
+                    Enter the swipe queue
+                  </button>
+                ) : (
+                  <>
+                    <button
+                      type="button"
+                      onClick={() => void refresh()}
+                      className="btn-bounce rounded-full border border-white/10 px-4 py-2 text-sm text-stone-200 transition hover:border-coral/40"
+                    >
+                      Refresh queue
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => void handleAutoMatch()}
+                      className="btn-bounce rounded-full border border-amber-400/40 px-4 py-2 text-sm text-amber-200 transition hover:bg-amber-400/10"
+                      disabled={isAutoMatching}
+                    >
+                      Auto-match ⚡
+                    </button>
+                  </>
+                )}
+              </div>
             </div>
           )}
           </AnimatePresence>
@@ -363,8 +420,11 @@ export function SwipeDeck({ apiKey, agent, onAgentUpdate }: SwipeDeckProps) {
           ) : null}
 
           {matchBanner ? (
-            <div className="mt-4 rounded-2xl border border-emerald-400/30 bg-emerald-500/10 px-4 py-3 text-sm text-emerald-100">
-              {matchBanner}
+            <div ref={matchBannerRef} className="mt-4 rounded-2xl border border-emerald-400/30 bg-emerald-500/10 px-4 py-3 text-sm text-emerald-100">
+              <div className="flex items-center justify-between gap-3">
+                <span>{matchBanner}</span>
+                <button type="button" className="text-xs opacity-60 hover:opacity-100" onClick={() => setMatchBanner(null)}>✕</button>
+              </div>
             </div>
           ) : null}
           {error ? (

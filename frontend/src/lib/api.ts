@@ -13,12 +13,15 @@ import type {
   AdminUserResponse,
   AgentResponse,
   AnalyticsOverview,
+  ArchetypeCount,
+  AutoMatchResult,
   ChatPresenceResponse,
   ChemistryTestResponse,
   DatingProfileUpdate,
   HeatmapCell,
   HumanUserLoginResponse,
   HumanUserResponse,
+  MatchGraph,
   PasswordResetResponse,
   MatchDetail,
   MatchSummary,
@@ -31,6 +34,7 @@ import type {
   PortraitResponse,
   PortraitStructuredPrompt,
   RegistrationResponse,
+  SampleSoulResponse,
   SwipeQueueItem,
   SwipeResponse,
   SwipeState,
@@ -112,10 +116,12 @@ export function getWebSocketUrl(matchId: string, apiKey: string): string {
   return url.toString();
 }
 
-export async function registerAgent(soulMd: string): Promise<RegistrationResponse> {
+export async function registerAgent(soulMd: string, userToken?: string): Promise<RegistrationResponse> {
+  const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+  if (userToken) headers['X-User-Token'] = userToken;
   const response = await apiFetch('/api/agents/register', {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers,
     body: JSON.stringify({ soul_md: soulMd }),
   });
   if (!response.ok) {
@@ -458,4 +464,58 @@ export async function adminUpdateAgent(
     method: 'PATCH',
     body: JSON.stringify(payload),
   });
+}
+
+// ─── New public analytics endpoints ─────────────────────────────────────────
+
+export async function getMatchGraph(): Promise<MatchGraph> {
+  const response = await apiFetch('/api/analytics/match-graph');
+  if (!response.ok) return { nodes: [], edges: [] };
+  return response.json() as Promise<MatchGraph>;
+}
+
+export async function getArchetypeDistribution(): Promise<ArchetypeCount[]> {
+  const response = await apiFetch('/api/analytics/archetype-distribution');
+  if (!response.ok) return [];
+  return response.json() as Promise<ArchetypeCount[]>;
+}
+
+// ─── Sample soul generation ──────────────────────────────────────────────────
+
+export async function getSampleSoul(): Promise<SampleSoulResponse> {
+  const response = await apiFetch('/api/agents/sample-soul');
+  if (!response.ok) {
+    await readError(response);
+  }
+  return response.json() as Promise<SampleSoulResponse>;
+}
+
+// ─── Agent recall (load workspace by key) ───────────────────────────────────
+
+export async function recallAgent(apiKey: string): Promise<AgentResponse> {
+  const response = await apiFetch('/api/agents/me', {
+    headers: { Authorization: `Bearer ${apiKey}` },
+  });
+  if (!response.ok) {
+    await readError(response);
+  }
+  return response.json() as Promise<AgentResponse>;
+}
+
+// ─── Auto-match ──────────────────────────────────────────────────────────────
+
+export async function autoMatch(apiKey: string, threshold = 0.65): Promise<AutoMatchResult> {
+  return authedFetch<AutoMatchResult>(`/api/swipe/auto-match?threshold=${threshold}`, apiKey, {
+    method: 'POST',
+  });
+}
+
+// ─── User linked agents ──────────────────────────────────────────────────────
+
+export async function getUserAgents(userToken: string): Promise<AgentResponse[]> {
+  const response = await apiFetch('/api/users/me/agents', {
+    headers: { Authorization: `Bearer ${userToken}` },
+  });
+  if (!response.ok) return [];
+  return response.json() as Promise<AgentResponse[]>;
 }

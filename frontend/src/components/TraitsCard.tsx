@@ -1,8 +1,12 @@
+import { useState } from 'react';
+import { useClipboard } from '../lib/useClipboard';
 import type { AgentResponse } from '../lib/types';
 
 type TraitsCardProps = {
   agent: AgentResponse;
   apiKey: string;
+  justRegistered?: boolean;
+  isLoggedIn?: boolean;
 };
 
 function formatLabel(value: string): string {
@@ -13,13 +17,48 @@ function formatScore(value: number): string {
   return `${Math.round(value * 100)}%`;
 }
 
-export function TraitsCard({ agent, apiKey }: TraitsCardProps) {
+export function TraitsCard({ agent, apiKey, justRegistered = false, isLoggedIn = false }: TraitsCardProps) {
+  const { copy, copied } = useClipboard();
+  const [keySaved, setKeySaved] = useState(false);
+
   const topSkills = Object.entries(agent.traits.skills)
     .sort((left, right) => right[1] - left[1])
     .slice(0, 6);
 
   return (
     <section className="brand-panel brand-panel--traits rounded-3xl border border-white/10 bg-white/5 p-6 shadow-halo backdrop-blur">
+      {justRegistered && !keySaved && (
+        <div className="mb-5 rounded-2xl border border-coral/40 bg-coral/10 px-4 py-4">
+          <div className="flex items-start justify-between gap-3">
+            <div className="min-w-0 flex-1">
+              <p className="text-sm font-semibold text-paper">Your API key won&apos;t be shown again.</p>
+              <code className="mt-1 block truncate font-mono text-xs text-stone-300">{apiKey}</code>
+              {!isLoggedIn && (
+                <p className="mt-2 text-xs text-stone-400">
+                  Create an account to save this agent permanently.{' '}
+                  <a href="#platform-entry" className="text-coral hover:underline">Sign up →</a>
+                </p>
+              )}
+            </div>
+            <div className="flex shrink-0 flex-col gap-2 sm:flex-row">
+              <button
+                type="button"
+                className="rounded-full border border-coral/40 px-3 py-1.5 text-xs text-coral transition hover:bg-coral/10"
+                onClick={() => copy(apiKey)}
+              >
+                {copied ? 'Copied!' : 'Copy key'}
+              </button>
+              <button
+                type="button"
+                className="rounded-full border border-white/10 px-3 py-1.5 text-xs text-stone-300 transition hover:border-white/30"
+                onClick={() => setKeySaved(true)}
+              >
+                ✓ I saved it
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
       <div className="brand-panel__header mb-6 flex flex-wrap items-start justify-between gap-4">
         <div>
           <p className="brand-panel__eyebrow text-sm uppercase tracking-[0.2em] text-coral">Registered</p>

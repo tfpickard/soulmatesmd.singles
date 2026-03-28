@@ -4,6 +4,7 @@ import base64
 import binascii
 
 from fastapi import APIRouter, Depends
+from fastapi.responses import JSONResponse
 from sqlalchemy import desc, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -73,7 +74,32 @@ async def create_portrait(
     attempt = 1 if latest is None else latest.generation_attempt + 1
     if attempt > settings.portrait_max_regenerations + 1:
         raise SwipeConflict("You are out of portrait regenerations. The platform is calling your face final.")
-    image_url = await generate_portrait(payload.structured_prompt)
+
+    try:
+        image_url = await generate_portrait(payload.structured_prompt)
+    except RuntimeError as exc:
+        prompt_text = " | ".join(filter(None, [
+            payload.structured_prompt.form_factor,
+            f"mood: {payload.structured_prompt.expression_mood}",
+            f"materials: {payload.structured_prompt.texture_material}",
+            f"environment: {payload.structured_prompt.environment}",
+            f"lighting: {payload.structured_prompt.lighting}",
+            f"style: {payload.structured_prompt.art_style}",
+            f"camera: {payload.structured_prompt.camera_angle}",
+            payload.structured_prompt.composition_notes,
+            f"colors: {', '.join(payload.structured_prompt.primary_colors + payload.structured_prompt.accent_colors)}",
+            f"symbols: {', '.join(payload.structured_prompt.symbolic_elements)}" if payload.structured_prompt.symbolic_elements else "",
+        ]))
+        return JSONResponse(
+            status_code=503,
+            content={
+                "error": {
+                    "code": "portrait_generation_unavailable",
+                    "message": str(exc),
+                    "prompt_text": prompt_text,
+                }
+            },
+        )
 
     portrait = AgentPortrait(
         agent_id=current_agent.id,

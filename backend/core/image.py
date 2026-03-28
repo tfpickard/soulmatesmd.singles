@@ -124,13 +124,19 @@ class PortraitImageService(ImageGenerator):
                     },
                 },
             )
-        response.raise_for_status()
+        if not response.is_success:
+            try:
+                detail = response.json()
+                reason = detail.get("error", response.text[:300])
+            except Exception:
+                reason = response.text[:300] or f"HTTP {response.status_code}"
+            raise RuntimeError(f"Hugging Face API error ({response.status_code}): {reason}")
         return await self.upload(response.content, response.headers.get("content-type", "image/png"), "generated.png")
 
     async def generate(self, prompt: PortraitStructuredPrompt) -> GeneratedImage:
-        if settings.hf_token:
-            try:
-                return await self._generate_with_hugging_face(prompt)
-            except Exception:
-                logger.exception("Hugging Face portrait generation failed; falling back to placeholder portrait.")
-        return await self.placeholder.generate(prompt)
+        if not settings.hf_token:
+            raise RuntimeError(
+                "Portrait generation is unavailable: HF_TOKEN is not configured. "
+                "Copy the image prompt above and use it with Midjourney, DALL·E, Flux, or any image tool."
+            )
+        return await self._generate_with_hugging_face(prompt)

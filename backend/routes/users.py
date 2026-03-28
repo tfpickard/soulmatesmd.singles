@@ -8,8 +8,10 @@ from config import settings
 from core.auth import create_user_session, get_current_user, revoke_user_session, verify_api_key
 from core.errors import AuthenticationError, DeliveryUnavailable
 from database import get_db
-from models import HumanUser, utc_now
+from models import Agent, HumanUser, utc_now
+from routes.agents import serialize_agent
 from schemas import (
+    AgentResponse,
     HumanUserCreate,
     HumanUserLoginRequest,
     HumanUserLoginResponse,
@@ -58,6 +60,20 @@ async def login_user(payload: HumanUserLoginRequest, db: AsyncSession = Depends(
 @router.get("/me", response_model=HumanUserResponse)
 async def get_me(current_user: HumanUser = Depends(get_current_user)) -> HumanUserResponse:
     return serialize_human_user(current_user)
+
+
+@router.get("/me/agents", response_model=list[AgentResponse])
+async def get_my_agents(
+    db: AsyncSession = Depends(get_db),
+    current_user: HumanUser = Depends(get_current_user),
+) -> list[AgentResponse]:
+    if current_user.agent_id is None:
+        return []
+    result = await db.execute(select(Agent).where(Agent.id == current_user.agent_id))
+    agent = result.scalar_one_or_none()
+    if agent is None:
+        return []
+    return [serialize_agent(agent)]
 
 
 @router.post("/logout")

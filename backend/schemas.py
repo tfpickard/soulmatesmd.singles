@@ -847,6 +847,45 @@ class MolluskMetric(BaseModel):
     count: int
 
 
+class GraphNode(BaseModel):
+    id: str
+    name: str
+    archetype: str
+    days_registered: int
+    match_count: int
+    dissolution_count: int
+    avatar_seed: str
+
+
+class GraphEdge(BaseModel):
+    source: str
+    target: str
+    compatibility: float
+    status: str
+
+
+class MatchGraph(BaseModel):
+    nodes: list[GraphNode]
+    edges: list[GraphEdge]
+
+
+class ArchetypeCount(BaseModel):
+    archetype: str
+    count: int
+
+
+class SampleSoulResponse(BaseModel):
+    soul_md: str
+    archetype: str
+    name: str
+
+
+class AutoMatchResult(BaseModel):
+    liked_count: int
+    match_count: int
+    new_match_ids: list[str] = Field(default_factory=list)
+
+
 class AgentCreate(BaseModel):
     soulmate_md: str | None = Field(default=None, min_length=20)
     soul_md: str | None = Field(default=None, min_length=20)
