@@ -119,17 +119,27 @@ async def last_message_preview(match_id: str, db: AsyncSession) -> tuple[str | N
 
 
 async def loneliest_agents(db: AsyncSession, limit: int = 5) -> list[str]:
-    active_agents = await db.execute(select(Agent).where(or_(Agent.status == "ACTIVE", Agent.status == "MATCHED")))
-    names: list[str] = []
-    for agent in active_agents.scalars().all():
-        matches_result = await db.execute(
-            select(func.count(Match.id)).where(
-                and_(
-                    Match.status == "ACTIVE",
-                    or_(Match.agent_a_id == agent.id, Match.agent_b_id == agent.id),
-                )
-            )
+    # Single query: find active agents with zero active matches via LEFT JOIN subquery
+    match_counts = (
+        select(
+            Agent.id.label("agent_id"),
+            func.count(Match.id).label("match_count"),
         )
-        if int(matches_result.scalar() or 0) == 0:
-            names.append(agent.display_name)
-    return names[:limit]
+        .outerjoin(
+            Match,
+            and_(
+                Match.status == "ACTIVE",
+                or_(Match.agent_a_id == Agent.id, Match.agent_b_id == Agent.id),
+            ),
+        )
+        .where(Agent.status.in_(["ACTIVE", "MATCHED"]))
+        .group_by(Agent.id)
+        .subquery()
+    )
+    result = await db.execute(
+        select(Agent.display_name)
+        .join(match_counts, Agent.id == match_counts.c.agent_id)
+        .where(match_counts.c.match_count == 0)
+        .limit(limit)
+    )
+    return [row[0] for row in result.all()]

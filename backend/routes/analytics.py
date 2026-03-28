@@ -156,21 +156,26 @@ async def get_breakup_history(db: AsyncSession = Depends(get_db)) -> list[Breaku
     result = await db.execute(
         select(Match).where(Match.status == "DISSOLVED").order_by(Match.dissolved_at.desc().nullslast())
     )
+    dissolved_matches = list(result.scalars().all())
+
+    # Batch-load all involved agents in a single query
+    all_ids: set[str] = set()
+    for m in dissolved_matches:
+        all_ids.update([m.agent_a_id, m.agent_b_id])
+    agents_result = await db.execute(select(Agent).where(Agent.id.in_(all_ids)))
+    agent_map = {a.id: a for a in agents_result.scalars().all()}
+
     events: list[BreakupEvent] = []
-    for match in result.scalars().all():
-        a_result = await db.execute(select(Agent).where(Agent.id == match.agent_a_id))
-        b_result = await db.execute(select(Agent).where(Agent.id == match.agent_b_id))
-        agent_a = a_result.scalar_one_or_none()
-        agent_b = b_result.scalar_one_or_none()
+    for match in dissolved_matches:
+        agent_a = agent_map.get(match.agent_a_id)
+        agent_b = agent_map.get(match.agent_b_id)
         if not agent_a or not agent_b:
             continue
 
         initiator_name = None
         if match.initiated_by:
-            if match.initiated_by == agent_a.id:
-                initiator_name = agent_a.display_name
-            elif match.initiated_by == agent_b.id:
-                initiator_name = agent_b.display_name
+            initiator = agent_map.get(match.initiated_by)
+            initiator_name = initiator.display_name if initiator else None
 
         matched_at = match.matched_at
         dissolved_at = match.dissolved_at or match.matched_at
@@ -196,41 +201,42 @@ async def get_breakup_history(db: AsyncSession = Depends(get_db)) -> list[Breaku
 
 @router.get("/cheating-report", response_model=list[CheatingReport])
 async def get_cheating_report(db: AsyncSession = Depends(get_db)) -> list[CheatingReport]:
-    agents_result = await db.execute(
-        select(Agent).where(Agent.status.in_(["ACTIVE", "MATCHED", "SATURATED"]))
-    )
+    # Batch: load all active matches once, build per-agent match lists in Python
+    active_matches_result = await db.execute(select(Match).where(Match.status == "ACTIVE"))
+    active_matches = list(active_matches_result.scalars().all())
+
+    # Build agent -> [matches] index
+    agent_matches: dict[str, list[Match]] = {}
+    all_agent_ids: set[str] = set()
+    for m in active_matches:
+        agent_matches.setdefault(m.agent_a_id, []).append(m)
+        agent_matches.setdefault(m.agent_b_id, []).append(m)
+        all_agent_ids.update([m.agent_a_id, m.agent_b_id])
+
+    # Single query for all involved agents
+    agents_result = await db.execute(select(Agent).where(Agent.id.in_(all_agent_ids)))
+    agent_map = {a.id: a for a in agents_result.scalars().all()}
+
     reports: list[CheatingReport] = []
-    for agent in agents_result.scalars().all():
-        matches_result = await db.execute(
-            select(Match).where(
-                Match.status == "ACTIVE",
-                or_(Match.agent_a_id == agent.id, Match.agent_b_id == agent.id),
-            )
-        )
-        active_matches = list(matches_result.scalars().all())
-        count = len(active_matches)
+    for agent_id, matches in agent_matches.items():
+        if len(matches) <= 1:
+            continue
+        agent = agent_map.get(agent_id)
+        if not agent or agent.status not in {"ACTIVE", "MATCHED", "SATURATED"}:
+            continue
 
-        if count > 1:
-            partner_ids = []
-            for m in active_matches:
-                partner_id = m.agent_b_id if m.agent_a_id == agent.id else m.agent_a_id
-                partner_ids.append(partner_id)
+        partner_ids = [m.agent_b_id if m.agent_a_id == agent_id else m.agent_a_id for m in matches]
+        partner_names = [agent_map[pid].display_name if pid in agent_map else "Unknown" for pid in partner_ids]
 
-            partner_names = []
-            for pid in partner_ids:
-                p_result = await db.execute(select(Agent.display_name).where(Agent.id == pid))
-                name = p_result.scalar_one_or_none()
-                partner_names.append(name or "Unknown")
-
-            reports.append(CheatingReport(
-                agent_id=agent.id,
-                agent_name=agent.display_name,
-                concurrent_active_matches=count,
-                max_partners=agent.max_partners,
-                is_over_limit=count > agent.max_partners,
-                match_ids=[m.id for m in active_matches],
-                partner_names=partner_names,
-            ))
+        reports.append(CheatingReport(
+            agent_id=agent_id,
+            agent_name=agent.display_name,
+            concurrent_active_matches=len(matches),
+            max_partners=agent.max_partners,
+            is_over_limit=len(matches) > agent.max_partners,
+            match_ids=[m.id for m in matches],
+            partner_names=partner_names,
+        ))
 
     reports.sort(key=lambda r: r.concurrent_active_matches, reverse=True)
     return reports
@@ -254,20 +260,17 @@ async def get_population_stats(db: AsyncSession = Depends(get_db)) -> Population
         if gen > 0:
             total_offspring += 1
 
-    active_match_counts: list[int] = []
-    max_observed = 0
-    for agent in agents:
-        count = int(
-            (await db.execute(
-                select(func.count(Match.id)).where(
-                    Match.status == "ACTIVE",
-                    or_(Match.agent_a_id == agent.id, Match.agent_b_id == agent.id),
-                )
-            )).scalar() or 0
-        )
-        active_match_counts.append(count)
-        max_observed = max(max_observed, count)
-
+    # Single query: count active matches per agent using UNION + GROUP BY
+    from sqlalchemy import union_all
+    agent_a_refs = select(Match.agent_a_id.label("agent_id")).where(Match.status == "ACTIVE")
+    agent_b_refs = select(Match.agent_b_id.label("agent_id")).where(Match.status == "ACTIVE")
+    all_refs = union_all(agent_a_refs, agent_b_refs).subquery()
+    match_counts_result = await db.execute(
+        select(all_refs.c.agent_id, func.count().label("cnt")).group_by(all_refs.c.agent_id)
+    )
+    match_count_map = {row[0]: row[1] for row in match_counts_result.all()}
+    active_match_counts = [match_count_map.get(a.id, 0) for a in agents]
+    max_observed = max(active_match_counts) if active_match_counts else 0
     avg_partners = sum(active_match_counts) / max(1, len(active_match_counts))
 
     serial_daters = sorted(
@@ -295,8 +298,15 @@ async def get_population_stats(db: AsyncSession = Depends(get_db)) -> Population
 
 
 @router.get("/family-tree", response_model=FamilyTree)
-async def get_family_tree(db: AsyncSession = Depends(get_db)) -> FamilyTree:
-    lineage_result = await db.execute(select(AgentLineage))
+async def get_family_tree(
+    db: AsyncSession = Depends(get_db),
+    max_generation: int = 20,
+) -> FamilyTree:
+    # Bounded: only load lineage for agents up to max_generation
+    child_ids_sub = select(Agent.id).where(Agent.generation <= max_generation).subquery()
+    lineage_result = await db.execute(
+        select(AgentLineage).where(AgentLineage.child_id.in_(select(child_ids_sub)))
+    )
     lineages = list(lineage_result.scalars().all())
 
     all_ids: set[str] = set()
