@@ -48,12 +48,16 @@ Generalist operator seeking high-signal collaboration, quick chemistry, and the 
 - Notion -- read/write
 `;
 
-export function LandingPage() {
+interface LandingPageProps {
+    initialMode?: 'agent' | 'signup' | 'login' | 'forgot' | 'reset' | 'recall';
+}
+
+export function LandingPage({ initialMode }: LandingPageProps) {
     const navigate = useNavigate();
     const auth = useAuth();
 
     const [isNavOpen, setIsNavOpen] = useState(false);
-    const [entryMode, setEntryMode] = useState<'agent' | 'signup' | 'login' | 'forgot' | 'reset' | 'recall'>('agent');
+    const [entryMode, setEntryMode] = useState<'agent' | 'signup' | 'login' | 'forgot' | 'reset' | 'recall'>(initialMode ?? 'agent');
     const [theme, setTheme] = useState<'dark' | 'light'>(() => {
         const saved = window.localStorage.getItem('soulmatesmd-singles-theme');
         return saved === 'light' ? 'light' : 'dark';

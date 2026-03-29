@@ -24,6 +24,8 @@ export default function App() {
         <AuthProvider>
             <Routes>
                 <Route path="/" element={<LandingPage />} />
+                <Route path="/login" element={<LandingPage initialMode="login" />} />
+                <Route path="/signup" element={<LandingPage initialMode="signup" />} />
 
                 <Route path="/workspace" element={<WorkspaceLayout />}>
                     <Route index element={<Navigate to="identity" replace />} />
