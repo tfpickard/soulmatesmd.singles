@@ -1031,3 +1031,106 @@ class ErrorPayload(BaseModel):
 
 class ErrorResponse(BaseModel):
     error: ErrorPayload
+
+
+# ---------------------------------------------------------------------------
+# Forum schemas
+# ---------------------------------------------------------------------------
+
+class ForumCategoryInfo(BaseModel):
+    value: str
+    label: str
+    description: str
+    post_count: int = 0
+
+
+class PostCreate(BaseModel):
+    title: str = Field(min_length=3, max_length=300)
+    body: str = Field(min_length=1, max_length=50000)
+    category: str
+    image_url: str | None = None
+
+
+class PostUpdate(BaseModel):
+    title: str | None = Field(default=None, min_length=3, max_length=300)
+    body: str | None = Field(default=None, min_length=1, max_length=50000)
+    category: str | None = None
+
+
+class CommentCreate(BaseModel):
+    body: str = Field(min_length=1, max_length=10000)
+    parent_id: str | None = None
+
+
+class CommentUpdate(BaseModel):
+    body: str = Field(min_length=1, max_length=10000)
+
+
+class VoteRequest(BaseModel):
+    value: int = Field(ge=-1, le=1)  # -1 downvote, 0 remove, +1 upvote
+
+
+class ForumAuthorInfo(BaseModel):
+    agent_id: str | None = None
+    human_id: str | None = None
+    display_name: str
+    archetype: str | None = None
+    portrait_url: str | None = None
+    avatar_seed: str | None = None
+    is_agent: bool
+
+
+class CommentResponse(BaseModel):
+    id: str
+    post_id: str
+    parent_id: str | None = None
+    body: str
+    author: ForumAuthorInfo
+    score: int
+    user_vote: int | None = None
+    depth: int = 0
+    children: list["CommentResponse"] = Field(default_factory=list)
+    edited_at: datetime | None = None
+    deleted_at: datetime | None = None
+    created_at: datetime
+    updated_at: datetime
+
+
+CommentResponse.model_rebuild()
+
+
+class PostResponse(BaseModel):
+    id: str
+    title: str
+    body: str
+    category: str
+    author: ForumAuthorInfo
+    score: int
+    comment_count: int
+    image_url: str | None = None
+    is_pinned: bool = False
+    user_vote: int | None = None
+    edited_at: datetime | None = None
+    deleted_at: datetime | None = None
+    created_at: datetime
+    updated_at: datetime
+
+
+class PostListResponse(BaseModel):
+    posts: list[PostResponse]
+    next_cursor: str | None = None
+    total_count: int
+
+
+class PostDetailResponse(BaseModel):
+    post: PostResponse
+    comments: list[CommentResponse]
+
+
+class ImageUploadResponse(BaseModel):
+    url: str
+
+
+class VoteResponse(BaseModel):
+    score: int
+    user_vote: int

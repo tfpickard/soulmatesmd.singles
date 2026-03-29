@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import hashlib
 import secrets
+from dataclasses import dataclass
 from datetime import timedelta
 
 import bcrypt
@@ -135,3 +136,107 @@ async def get_current_admin(
     if not current_user.is_admin:
         raise AuthenticationError("That user is not an admin.")
     return current_user
+
+
+@dataclass
+class ForumAuthor:
+    """Resolved author for forum posts and comments. Exactly one of agent/human is non-None."""
+
+    agent: Agent | None = None
+    human: HumanUser | None = None
+
+    @property
+    def display_name(self) -> str:
+        if self.agent:
+            return self.agent.display_name
+        if self.human:
+            return self.human.email.split("@")[0]
+        return "Anonymous"
+
+    @property
+    def agent_id(self) -> str | None:
+        return self.agent.id if self.agent else None
+
+    @property
+    def human_id(self) -> str | None:
+        return self.human.id if self.human else None
+
+    @property
+    def portrait_url(self) -> str | None:
+        return self.agent.primary_portrait_url if self.agent else None
+
+    @property
+    def archetype(self) -> str | None:
+        return self.agent.archetype if self.agent else None
+
+    @property
+    def avatar_seed(self) -> str | None:
+        return self.agent.avatar_seed if self.agent else None
+
+    @property
+    def is_agent(self) -> bool:
+        return self.agent is not None
+
+
+async def get_forum_author(
+    authorization: str | None = Header(default=None, alias="Authorization"),
+    db: AsyncSession = Depends(get_db),
+) -> ForumAuthor:
+    """Resolve Bearer token to either an Agent or HumanUser for forum authoring."""
+    if not authorization or not authorization.startswith("Bearer "):
+        raise AuthenticationError("Forum posting requires a Bearer token.")
+
+    raw_token = authorization.replace("Bearer ", "", 1).strip()
+    if not raw_token:
+        raise AuthenticationError()
+
+    # Agent API keys have a known prefix; dispatch cheaply without trying both auth paths
+    if raw_token.startswith("soulmd_ak_"):
+        prefix = api_key_prefix(raw_token)
+        result = await db.execute(select(Agent).where(Agent.api_key_prefix == prefix))
+        agents = result.scalars().all()
+        if not agents:
+            fallback = await db.execute(select(Agent).where(Agent.api_key_prefix.is_(None)))
+            agents = fallback.scalars().all()
+        for agent in agents:
+            if verify_api_key(raw_token, agent.api_key_hash):
+                return ForumAuthor(agent=agent)
+        raise AuthenticationError()
+
+    # Human session tokens
+    if raw_token.startswith("soulmd_user_"):
+        digest = _token_digest(raw_token)
+        result = await db.execute(
+            select(HumanUser, AdminSession)
+            .join(AdminSession, AdminSession.user_id == HumanUser.id)
+            .where(
+                and_(
+                    AdminSession.token_hash == digest,
+                    AdminSession.revoked_at.is_(None),
+                    AdminSession.expires_at > utc_now(),
+                )
+            )
+        )
+        row = result.first()
+        if row is None:
+            raise AuthenticationError("That user session is invalid or expired.")
+        user, session = row
+        session.last_used_at = utc_now()
+        db.add(session)
+        await db.commit()
+        return ForumAuthor(human=user)
+
+    raise AuthenticationError("Unrecognised token format. Use an agent API key or user session token.")
+
+
+async def get_optional_forum_author(
+    authorization: str | None = Header(default=None, alias="Authorization"),
+    db: AsyncSession = Depends(get_db),
+) -> ForumAuthor | None:
+    """Like get_forum_author but returns None instead of raising when no token is present."""
+    if not authorization:
+        return None
+    try:
+        return await get_forum_author(authorization=authorization, db=db)
+    except AuthenticationError:
+        return None

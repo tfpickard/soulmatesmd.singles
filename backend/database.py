@@ -82,6 +82,7 @@ async def init_db() -> None:
         await connection.run_sync(_ensure_human_user_columns)
         await connection.run_sync(_ensure_match_columns)
         await connection.run_sync(_ensure_polyamory_columns)
+        await connection.run_sync(_ensure_forum_columns)
 
 
 def _ensure_agent_columns(connection) -> None:
@@ -179,3 +180,8 @@ def _ensure_polyamory_columns(connection) -> None:
         for col_name, col_type in match_cols:
             if col_name not in existing:
                 connection.exec_driver_sql(f"ALTER TABLE matches ADD COLUMN {col_name} {col_type}")
+
+
+def _ensure_forum_columns(connection) -> None:
+    """Placeholder for future forum table column migrations. Tables are created by create_all."""
+    pass

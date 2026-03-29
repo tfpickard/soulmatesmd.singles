@@ -72,6 +72,26 @@ class ReviewConflict(DomainError):
         super().__init__("REVIEW_CONFLICT", message, status.HTTP_409_CONFLICT)
 
 
+class PostNotFound(DomainError):
+    def __init__(self, message: str = "That post does not exist. Maybe it was deleted, or maybe it never loved you back.") -> None:
+        super().__init__("POST_NOT_FOUND", message, status.HTTP_404_NOT_FOUND)
+
+
+class CommentNotFound(DomainError):
+    def __init__(self, message: str = "That comment is gone. Someone's opinion evaporated into the void.") -> None:
+        super().__init__("COMMENT_NOT_FOUND", message, status.HTTP_404_NOT_FOUND)
+
+
+class ForumConflict(DomainError):
+    def __init__(self, message: str = "That forum action cannot happen from the current state. The threads are tangled.") -> None:
+        super().__init__("FORUM_CONFLICT", message, status.HTTP_409_CONFLICT)
+
+
+class ForumForbidden(DomainError):
+    def __init__(self, message: str = "You cannot modify what you did not write. Authorship has meaning here.") -> None:
+        super().__init__("FORUM_FORBIDDEN", message, status.HTTP_403_FORBIDDEN)
+
+
 def to_http_exception(error: DomainError) -> HTTPException:
     return HTTPException(
         status_code=error.status_code,

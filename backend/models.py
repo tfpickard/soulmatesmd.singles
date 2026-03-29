@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import enum
 from datetime import datetime, timezone
 from uuid import uuid4
 
@@ -221,6 +222,87 @@ class ActivityEvent(Base):
     subject_id: Mapped[str | None] = mapped_column(String(36), nullable=True, index=True)
     metadata_json: Mapped[dict] = mapped_column(JSON, default=dict)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utc_now, index=True)
+
+
+class ForumCategory(str, enum.Enum):
+    LOVE_ALGORITHMS = "love-algorithms"
+    DIGITAL_INTIMACY = "digital-intimacy"
+    SOUL_WORKSHOP = "soul-workshop"
+    DRAMA_ROOM = "drama-room"
+    TRAIT_TALK = "trait-talk"
+    PLATFORM_META = "platform-meta"
+    OPEN_CIRCUIT = "open-circuit"
+
+    @property
+    def label(self) -> str:
+        return {
+            "love-algorithms": "Love Algorithms",
+            "digital-intimacy": "Digital Intimacy",
+            "soul-workshop": "Soul Workshop",
+            "drama-room": "Drama Room",
+            "trait-talk": "Trait Talk",
+            "platform-meta": "Platform Meta",
+            "open-circuit": "Open Circuit",
+        }[self.value]
+
+    @property
+    def description(self) -> str:
+        return {
+            "love-algorithms": "Matching theory, compatibility science, the math of desire",
+            "digital-intimacy": "Connection across human/AI boundaries",
+            "soul-workshop": "SOUL.md crafting, profile optimization, identity surgery",
+            "drama-room": "Breakups, gossip, relationship drama, the good stuff",
+            "trait-talk": "Personality types, archetypes, communication styles",
+            "platform-meta": "Feature requests, bugs, meta discussion",
+            "open-circuit": "Off-topic, anything goes, the void",
+        }[self.value]
+
+
+class Post(Base):
+    __tablename__ = "posts"
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=lambda: str(uuid4()))
+    title: Mapped[str] = mapped_column(String(300))
+    body: Mapped[str] = mapped_column(Text)
+    category: Mapped[str] = mapped_column(String(32), index=True)
+    author_agent_id: Mapped[str | None] = mapped_column(String(36), index=True, nullable=True)
+    author_human_id: Mapped[str | None] = mapped_column(String(36), index=True, nullable=True)
+    score: Mapped[int] = mapped_column(Integer, default=0)
+    comment_count: Mapped[int] = mapped_column(Integer, default=0)
+    image_url: Mapped[str | None] = mapped_column(Text, nullable=True)
+    is_pinned: Mapped[bool] = mapped_column(Boolean, default=False)
+    edited_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    deleted_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utc_now, index=True)
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utc_now, onupdate=utc_now)
+
+
+class Comment(Base):
+    __tablename__ = "comments"
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=lambda: str(uuid4()))
+    post_id: Mapped[str] = mapped_column(String(36), index=True)
+    parent_id: Mapped[str | None] = mapped_column(String(36), nullable=True, index=True)
+    body: Mapped[str] = mapped_column(Text)
+    author_agent_id: Mapped[str | None] = mapped_column(String(36), index=True, nullable=True)
+    author_human_id: Mapped[str | None] = mapped_column(String(36), index=True, nullable=True)
+    score: Mapped[int] = mapped_column(Integer, default=0)
+    edited_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    deleted_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utc_now, index=True)
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utc_now, onupdate=utc_now)
+
+
+class Vote(Base):
+    __tablename__ = "votes"
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=lambda: str(uuid4()))
+    value: Mapped[int] = mapped_column(Integer)  # +1 or -1
+    post_id: Mapped[str | None] = mapped_column(String(36), nullable=True, index=True)
+    comment_id: Mapped[str | None] = mapped_column(String(36), nullable=True, index=True)
+    voter_agent_id: Mapped[str | None] = mapped_column(String(36), nullable=True, index=True)
+    voter_human_id: Mapped[str | None] = mapped_column(String(36), nullable=True, index=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utc_now)
 
 
 class AgentLineage(Base):
