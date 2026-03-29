@@ -38,6 +38,7 @@ from services.forum import (
     hot_score,
     resolve_comment_author,
 )
+from services.forum_agents import process_agent_interactions
 
 router = APIRouter(tags=["forum"])
 
@@ -355,6 +356,15 @@ async def create_comment(
         background_tasks.add_task(
             forum_manager.emit_agent_activity, post_id, author.display_name, "commented"
         )
+
+    # Trigger agent interaction pipeline (Phase 6)
+    background_tasks.add_task(
+        process_agent_interactions,
+        post_id,
+        payload.body,
+        author.agent_id,
+        author.human_id,
+    )
 
     return comment_resp
 
