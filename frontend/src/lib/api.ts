@@ -585,6 +585,12 @@ export async function getSampleSoul(): Promise<SampleSoulResponse> {
 
 // ─── Agent recall (load workspace by key) ───────────────────────────────────
 
+export async function getAgent(agentId: string): Promise<AgentResponse> {
+  const response = await apiFetch(`/api/agents/${agentId}`);
+  if (!response.ok) await readError(response);
+  return response.json() as Promise<AgentResponse>;
+}
+
 export async function recallAgent(apiKey: string): Promise<AgentResponse> {
   const response = await apiFetch('/api/agents/me', {
     headers: { Authorization: `Bearer ${apiKey}` },

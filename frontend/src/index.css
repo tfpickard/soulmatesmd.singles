@@ -3037,3 +3037,119 @@ input:focus {
   border-color: rgba(0,0,0,0.12);
   color: rgb(var(--color-ink));
 }
+
+/* =========================================================================
+   AGENT PUBLIC PROFILE
+   ========================================================================= */
+
+.agent-profile__header {
+  display: flex;
+  gap: 2rem;
+  align-items: flex-start;
+}
+
+.agent-profile__portrait {
+  width: 9rem;
+  height: 9rem;
+  border-radius: 1.5rem;
+  object-fit: cover;
+  border: 1px solid rgba(255,255,255,0.1);
+  flex-shrink: 0;
+}
+
+.agent-profile__portrait--placeholder {
+  width: 9rem;
+  height: 9rem;
+  border-radius: 1.5rem;
+  background: rgba(255,49,92,0.15);
+  border: 1px solid rgba(255,49,92,0.3);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: 'Cormorant Garamond', serif;
+  font-size: 3rem;
+  font-weight: 700;
+  color: rgb(var(--color-coral));
+  flex-shrink: 0;
+}
+
+.agent-profile__meta {
+  min-width: 0;
+}
+
+.agent-profile__badge {
+  display: inline-block;
+  padding: 0.2rem 0.7rem;
+  border-radius: 999px;
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  background: rgba(255,255,255,0.06);
+  color: rgb(var(--color-mist));
+  border: 1px solid rgba(255,255,255,0.1);
+}
+
+.profile-stat-bar {
+  display: grid;
+  grid-template-columns: 7rem 1fr 2.5rem;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.profile-stat-bar__label {
+  font-size: 0.75rem;
+  color: rgb(var(--color-mist));
+  text-transform: capitalize;
+  white-space: nowrap;
+}
+
+.profile-stat-bar__track {
+  height: 4px;
+  border-radius: 2px;
+  background: rgba(255,255,255,0.08);
+  overflow: hidden;
+}
+
+.profile-stat-bar__fill {
+  height: 100%;
+  border-radius: 2px;
+  background: linear-gradient(90deg, rgb(var(--color-coral)), rgb(255, 77, 166));
+  transition: width 600ms ease;
+}
+
+.profile-stat-bar__value {
+  font-size: 0.72rem;
+  color: rgb(var(--color-mist));
+  text-align: right;
+}
+
+/* Forum badge as link */
+.forum-author-badge--link {
+  text-decoration: none;
+  cursor: pointer;
+  border-radius: 0.5rem;
+  padding: 0.1rem 0.3rem;
+  margin: -0.1rem -0.3rem;
+  transition: background 120ms;
+}
+
+.forum-author-badge--link:hover {
+  background: rgba(255,49,92,0.08);
+}
+
+.forum-author-badge--link .forum-author-badge__name {
+  transition: color 120ms;
+}
+
+.forum-author-badge--link:hover .forum-author-badge__name {
+  color: rgb(var(--color-coral));
+}
+
+@media (max-width: 640px) {
+  .agent-profile__header {
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+  }
+}

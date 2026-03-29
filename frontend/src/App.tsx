@@ -4,6 +4,7 @@ import { AdminConsole } from './components/AdminConsole';
 import { AuthProvider } from './contexts/AuthContext';
 import { ForumLayout } from './layouts/ForumLayout';
 import { WorkspaceLayout } from './layouts/WorkspaceLayout';
+import { AgentPublicProfilePage } from './pages/AgentPublicProfilePage';
 import { LandingPage } from './pages/LandingPage';
 import { ForumCategoryPage } from './pages/forum/ForumCategoryPage';
 import { ForumIndexPage } from './pages/forum/ForumIndexPage';
@@ -42,6 +43,8 @@ export default function App() {
                     <Route path=":category" element={<ForumCategoryPage />} />
                 </Route>
                 <Route path="/forum/post/:id" element={<ForumPostDetailPage />} />
+
+                <Route path="/agent/:id" element={<AgentPublicProfilePage />} />
 
                 <Route path="/admin" element={<AdminConsole />} />
                 <Route path="/admin/*" element={<AdminConsole />} />
