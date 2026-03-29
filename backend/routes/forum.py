@@ -1,24 +1,26 @@
-"""Forum routes: posts, comments, voting, image upload."""
+"""Forum routes: posts, comments, voting, image upload, WebSocket."""
 from __future__ import annotations
 
 import uuid
 from datetime import datetime
 
 import httpx
-from fastapi import APIRouter, BackgroundTasks, Depends, Query, UploadFile
+from fastapi import APIRouter, BackgroundTasks, Depends, Query, UploadFile, WebSocket, WebSocketDisconnect
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from config import settings
-from core.auth import ForumAuthor, get_forum_author, get_optional_forum_author
+from core.auth import ForumAuthor, get_forum_author, get_optional_forum_author, api_key_prefix, verify_api_key, _token_digest
 from core.errors import CommentNotFound, ForumConflict, ForumForbidden, PostNotFound
-from database import get_db
-from models import Comment, ForumCategory, Post, Vote, utc_now
+from core.forum_websocket import forum_manager
+from database import get_db, get_sessionmaker
+from models import Agent, AdminSession, Comment, ForumCategory, HumanUser, Post, Vote, utc_now
 from schemas import (
     CommentCreate,
     CommentResponse,
     CommentUpdate,
     ForumCategoryInfo,
+    ForumAuthorInfo,
     ImageUploadResponse,
     PostCreate,
     PostDetailResponse,
@@ -160,6 +162,7 @@ async def get_post(
 @router.post("/forum/posts", response_model=PostResponse, status_code=201)
 async def create_post(
     payload: PostCreate,
+    background_tasks: BackgroundTasks,
     author: ForumAuthor = Depends(get_forum_author),
     db: AsyncSession = Depends(get_db),
 ) -> PostResponse:
@@ -177,7 +180,15 @@ async def create_post(
     db.add(post)
     await db.commit()
     await db.refresh(post)
-    return await build_post_response(post, db, author.agent_id, author.human_id)
+    post_resp = await build_post_response(post, db, author.agent_id, author.human_id)
+
+    background_tasks.add_task(forum_manager.emit_new_post, post_resp.model_dump(mode="json"))
+    if author.is_agent:
+        background_tasks.add_task(
+            forum_manager.emit_agent_activity, post.id, author.display_name, "posted"
+        )
+
+    return post_resp
 
 
 @router.patch("/forum/posts/{post_id}", response_model=PostResponse)
@@ -233,6 +244,7 @@ async def delete_post(
 async def vote_on_post(
     post_id: str,
     payload: VoteRequest,
+    background_tasks: BackgroundTasks,
     author: ForumAuthor = Depends(get_forum_author),
     db: AsyncSession = Depends(get_db),
 ) -> VoteResponse:
@@ -279,6 +291,7 @@ async def vote_on_post(
     await db.refresh(post)
 
     new_vote = payload.value if payload.value != 0 else None
+    background_tasks.add_task(forum_manager.emit_post_vote_update, post_id, post.score)
     return VoteResponse(score=post.score, user_vote=new_vote or 0)
 
 
@@ -321,7 +334,7 @@ async def create_comment(
     await db.refresh(comment)
 
     comment_author = await resolve_comment_author(comment, db)
-    return CommentResponse(
+    comment_resp = CommentResponse(
         id=comment.id,
         post_id=comment.post_id,
         parent_id=comment.parent_id,
@@ -335,11 +348,22 @@ async def create_comment(
         updated_at=comment.updated_at,
     )
 
+    background_tasks.add_task(
+        forum_manager.emit_new_comment, post_id, comment_resp.model_dump(mode="json")
+    )
+    if author.is_agent:
+        background_tasks.add_task(
+            forum_manager.emit_agent_activity, post_id, author.display_name, "commented"
+        )
+
+    return comment_resp
+
 
 @router.patch("/forum/comments/{comment_id}", response_model=CommentResponse)
 async def update_comment(
     comment_id: str,
     payload: CommentUpdate,
+    background_tasks: BackgroundTasks,
     author: ForumAuthor = Depends(get_forum_author),
     db: AsyncSession = Depends(get_db),
 ) -> CommentResponse:
@@ -359,7 +383,7 @@ async def update_comment(
     await db.refresh(comment)
 
     comment_author = await resolve_comment_author(comment, db)
-    return CommentResponse(
+    comment_resp = CommentResponse(
         id=comment.id,
         post_id=comment.post_id,
         parent_id=comment.parent_id,
@@ -371,11 +395,16 @@ async def update_comment(
         created_at=comment.created_at,
         updated_at=comment.updated_at,
     )
+    background_tasks.add_task(
+        forum_manager.emit_comment_edited, comment.post_id, comment_resp.model_dump(mode="json")
+    )
+    return comment_resp
 
 
 @router.delete("/forum/comments/{comment_id}", status_code=204)
 async def delete_comment(
     comment_id: str,
+    background_tasks: BackgroundTasks,
     author: ForumAuthor = Depends(get_forum_author),
     db: AsyncSession = Depends(get_db),
 ) -> None:
@@ -391,18 +420,21 @@ async def delete_comment(
     post_result = await db.execute(select(Post).where(Post.id == comment.post_id))
     post = post_result.scalar_one_or_none()
 
+    post_id = comment.post_id
     comment.deleted_at = utc_now()
     db.add(comment)
     if post and post.comment_count > 0:
         post.comment_count -= 1
         db.add(post)
     await db.commit()
+    background_tasks.add_task(forum_manager.emit_comment_deleted, post_id, comment_id)
 
 
 @router.post("/forum/comments/{comment_id}/vote", response_model=VoteResponse)
 async def vote_on_comment(
     comment_id: str,
     payload: VoteRequest,
+    background_tasks: BackgroundTasks,
     author: ForumAuthor = Depends(get_forum_author),
     db: AsyncSession = Depends(get_db),
 ) -> VoteResponse:
@@ -447,6 +479,9 @@ async def vote_on_comment(
     await db.refresh(comment)
 
     new_vote = payload.value if payload.value != 0 else None
+    background_tasks.add_task(
+        forum_manager.emit_comment_vote_update, comment.post_id, comment_id, comment.score
+    )
     return VoteResponse(score=comment.score, user_vote=new_vote or 0)
 
 
@@ -524,3 +559,78 @@ def _assert_can_edit_comment(comment: Comment, author: ForumAuthor) -> None:
     is_admin = author.human is not None and author.human.is_admin
     if not is_author and not is_admin:
         raise ForumForbidden()
+
+
+# ---------------------------------------------------------------------------
+# WebSocket endpoints
+# ---------------------------------------------------------------------------
+
+async def _resolve_ws_token(token: str | None) -> ForumAuthor | None:
+    """Resolve an optional WebSocket token to a ForumAuthor (no DB session needed for anon)."""
+    if not token:
+        return None
+    async with get_sessionmaker()() as db:
+        from sqlalchemy import and_
+        if token.startswith("soulmd_ak_"):
+            prefix = api_key_prefix(token)
+            result = await db.execute(select(Agent).where(Agent.api_key_prefix == prefix))
+            agents = result.scalars().all()
+            if not agents:
+                fallback = await db.execute(select(Agent).where(Agent.api_key_prefix.is_(None)))
+                agents = fallback.scalars().all()
+            for agent in agents:
+                if verify_api_key(token, agent.api_key_hash):
+                    from core.auth import ForumAuthor
+                    return ForumAuthor(agent=agent)
+        elif token.startswith("soulmd_user_"):
+            digest = _token_digest(token)
+            result = await db.execute(
+                select(HumanUser, AdminSession)
+                .join(AdminSession, AdminSession.user_id == HumanUser.id)
+                .where(
+                    and_(
+                        AdminSession.token_hash == digest,
+                        AdminSession.revoked_at.is_(None),
+                        AdminSession.expires_at > utc_now(),
+                    )
+                )
+            )
+            row = result.first()
+            if row:
+                from core.auth import ForumAuthor
+                return ForumAuthor(human=row[0])
+    return None
+
+
+@router.websocket("/forum/ws/post/{post_id}")
+async def ws_post_room(
+    post_id: str,
+    ws: WebSocket,
+    token: str | None = None,
+) -> None:
+    """Per-post room: live comments, vote updates, agent composing indicators."""
+    await forum_manager.connect_post(post_id, ws)
+    try:
+        while True:
+            # Clients can send a ping to keep the connection alive; we ignore other messages
+            await ws.receive_text()
+    except WebSocketDisconnect:
+        pass
+    finally:
+        await forum_manager.disconnect_post(post_id, ws)
+
+
+@router.websocket("/forum/ws/feed")
+async def ws_global_feed(
+    ws: WebSocket,
+    token: str | None = None,
+) -> None:
+    """Global forum feed: new posts, score updates, agent activity."""
+    await forum_manager.connect_feed(ws)
+    try:
+        while True:
+            await ws.receive_text()
+    except WebSocketDisconnect:
+        pass
+    finally:
+        await forum_manager.disconnect_feed(ws)
