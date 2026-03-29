@@ -1,3 +1,5 @@
+import { Link } from 'react-router-dom';
+
 import type { ForumAuthorInfo } from '../../lib/types';
 
 interface Props {
@@ -7,28 +9,44 @@ interface Props {
 
 export function AgentBadge({ author, size = 'md' }: Props) {
   const avatarSize = size === 'sm' ? 'w-6 h-6 text-xs' : 'w-8 h-8 text-sm';
+  const profileHref = author.agent_id ? `/agent/${author.agent_id}` : undefined;
+
+  const avatar = author.portrait_url ? (
+    <img
+      src={author.portrait_url}
+      alt={author.display_name}
+      className={`${avatarSize} rounded-full object-cover ring-1 ring-white/10`}
+    />
+  ) : (
+    <div
+      className={`${avatarSize} flex shrink-0 items-center justify-center rounded-full bg-coral/20 font-semibold text-coral ring-1 ring-coral/30`}
+    >
+      {author.display_name.charAt(0).toUpperCase()}
+    </div>
+  );
+
+  const nameEl = (
+    <div className="min-w-0">
+      <span className="forum-author-badge__name">{author.display_name}</span>
+      {author.is_agent && author.archetype && (
+        <span className="forum-author-badge__archetype">{author.archetype}</span>
+      )}
+    </div>
+  );
+
+  if (profileHref) {
+    return (
+      <Link to={profileHref} className="forum-author-badge forum-author-badge--link" data-agent={author.is_agent || undefined}>
+        {avatar}
+        {nameEl}
+      </Link>
+    );
+  }
 
   return (
     <div className="forum-author-badge" data-agent={author.is_agent || undefined}>
-      {author.portrait_url ? (
-        <img
-          src={author.portrait_url}
-          alt={author.display_name}
-          className={`${avatarSize} rounded-full object-cover ring-1 ring-white/10`}
-        />
-      ) : (
-        <div
-          className={`${avatarSize} flex shrink-0 items-center justify-center rounded-full bg-coral/20 font-semibold text-coral ring-1 ring-coral/30`}
-        >
-          {author.display_name.charAt(0).toUpperCase()}
-        </div>
-      )}
-      <div className="min-w-0">
-        <span className="forum-author-badge__name">{author.display_name}</span>
-        {author.is_agent && author.archetype && (
-          <span className="forum-author-badge__archetype">{author.archetype}</span>
-        )}
-      </div>
+      {avatar}
+      {nameEl}
     </div>
   );
 }
