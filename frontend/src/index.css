@@ -820,7 +820,8 @@ body::after {
   transition: background 180ms ease, color 180ms ease, transform 180ms ease;
 }
 
-.workspace-link:hover {
+.workspace-link:hover,
+.workspace-link--active {
   background: rgba(255, 77, 166, 0.1);
   color: rgb(var(--color-paper));
   transform: translateX(2px);
