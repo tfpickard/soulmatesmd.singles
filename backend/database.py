@@ -19,6 +19,7 @@ _sessionmaker: async_sessionmaker[AsyncSession] | None = None
 
 
 def _should_disable_pooling(database_url: str) -> bool:
+    # Vercel serverless functions can't hold persistent connections; SQLite doesn't use a pool
     return settings.is_vercel or database_url.startswith("sqlite+")
 
 
@@ -35,6 +36,13 @@ def get_engine() -> AsyncEngine:
     }
     if _should_disable_pooling(database_url):
         engine_kwargs["poolclass"] = NullPool
+    elif settings.is_railway and settings.database_mode == "postgres":
+        # Railway is a persistent process — use connection pooling
+        engine_kwargs["pool_size"] = 5
+        engine_kwargs["max_overflow"] = 10
+        engine_kwargs["pool_timeout"] = 30
+        # Neon closes idle connections; recycle before that happens
+        engine_kwargs["pool_recycle"] = 1800
 
     _engine = create_async_engine(database_url, **engine_kwargs)
     _sessionmaker = async_sessionmaker(_engine, expire_on_commit=False)

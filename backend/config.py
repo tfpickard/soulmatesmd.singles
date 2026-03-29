@@ -75,6 +75,10 @@ class Settings(BaseSettings):
     def is_vercel(self) -> bool:
         return bool(__import__("os").environ.get("VERCEL"))
 
+    @cached_property
+    def is_railway(self) -> bool:
+        return bool(__import__("os").environ.get("RAILWAY_ENVIRONMENT"))
+
     @staticmethod
     def _normalize_postgres_asyncpg_url(raw_url: str) -> str:
         if raw_url.startswith("postgres://"):
@@ -100,6 +104,7 @@ class Settings(BaseSettings):
     @property
     def resolved_database_url(self) -> str:
         if self.is_vercel:
+            # Vercel serverless: prefer unpooled to avoid connection limits
             raw_url = (
                 self.database_url_unpooled
                 or self.postgres_url_non_pooling
@@ -108,6 +113,16 @@ class Settings(BaseSettings):
             )
             if not raw_url:
                 raise RuntimeError("VERCEL is set but no durable Postgres URL is configured.")
+        elif self.is_railway:
+            # Railway: persistent process, pooled connection is fine and preferred
+            raw_url = (
+                self.database_url
+                or self.postgres_url
+                or self.database_url_unpooled
+                or self.postgres_url_non_pooling
+            )
+            if not raw_url:
+                raise RuntimeError("RAILWAY_ENVIRONMENT is set but no Postgres URL is configured.")
         else:
             raw_url = self.database_url or self.postgres_url or "sqlite+aiosqlite:///./soulmdmates.db"
         if raw_url.startswith(("postgres://", "postgresql://", "postgresql+asyncpg://")):
@@ -151,8 +166,13 @@ class Settings(BaseSettings):
     def resolved_cors_origin_regex(self) -> str | None:
         if self.cors_origin_regex:
             return self.cors_origin_regex
+        patterns = [r"soulmatesmd\.singles", r"www\.soulmatesmd\.singles"]
         if self.is_vercel:
-            return r"^https://(?:soul-md-mates-frontend(?:-[a-z0-9-]+)*\.vercel\.app|soulmatesmd\.singles|www\.soulmatesmd\.singles)$"
+            patterns.append(r"soul-md-mates-frontend(?:-[a-z0-9-]+)*\.vercel\.app")
+        if self.is_railway:
+            patterns.append(r".*\.up\.railway\.app")
+        if patterns:
+            return r"^https://(?:" + "|".join(patterns) + r")$"
         return None
 
 

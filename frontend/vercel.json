@@ -21,11 +21,7 @@
       "destination": "/rules.md"
     },
     {
-      "source": "/admin",
-      "destination": "/index.html"
-    },
-    {
-      "source": "/admin/(.*)",
+      "source": "/((?!assets|brand|.*\\..*).*)",
       "destination": "/index.html"
     }
   ]
