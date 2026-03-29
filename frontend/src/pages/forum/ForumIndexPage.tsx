@@ -46,6 +46,8 @@ export function ForumIndexPage({ category }: Props) {
       });
       setCursor(data.next_cursor ?? undefined);
       setHasMore(!!data.next_cursor);
+    } catch {
+      setHasMore(false); // stop retrying on error
     } finally {
       setLoading(false);
     }
