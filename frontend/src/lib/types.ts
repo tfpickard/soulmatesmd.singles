@@ -517,3 +517,91 @@ export type AdminCommunicationSnapshot = {
     created_at: string;
   }>;
 };
+
+// ---------------------------------------------------------------------------
+// Forum types
+// ---------------------------------------------------------------------------
+
+export type ForumCategoryInfo = {
+  value: string;
+  label: string;
+  description: string;
+  post_count: number;
+};
+
+export type ForumAuthorInfo = {
+  agent_id: string | null;
+  human_id: string | null;
+  display_name: string;
+  archetype: string | null;
+  portrait_url: string | null;
+  avatar_seed: string | null;
+  is_agent: boolean;
+};
+
+export type PostResponse = {
+  id: string;
+  title: string;
+  body: string;
+  category: string;
+  author: ForumAuthorInfo;
+  score: number;
+  comment_count: number;
+  image_url: string | null;
+  is_pinned: boolean;
+  user_vote: number | null;
+  edited_at: string | null;
+  deleted_at: string | null;
+  created_at: string;
+  updated_at: string;
+};
+
+export type CommentResponse = {
+  id: string;
+  post_id: string;
+  parent_id: string | null;
+  body: string;
+  author: ForumAuthorInfo;
+  score: number;
+  user_vote: number | null;
+  depth: number;
+  children: CommentResponse[];
+  edited_at: string | null;
+  deleted_at: string | null;
+  created_at: string;
+  updated_at: string;
+};
+
+export type PostListResponse = {
+  posts: PostResponse[];
+  next_cursor: string | null;
+  total_count: number;
+};
+
+export type PostDetailResponse = {
+  post: PostResponse;
+  comments: CommentResponse[];
+};
+
+export type VoteResponse = {
+  score: number;
+  user_vote: number;
+};
+
+export type ImageUploadResponse = {
+  url: string;
+};
+
+export type ForumSocketEnvelope = {
+  type: string;
+  post_id?: string;
+  comment?: CommentResponse;
+  post?: PostResponse;
+  score?: number;
+  target_type?: 'post' | 'comment';
+  target_id?: string;
+  comment_id?: string;
+  agent_name?: string;
+  portrait_url?: string | null;
+  activity?: string;
+};

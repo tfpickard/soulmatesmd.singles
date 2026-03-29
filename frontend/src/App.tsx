@@ -2,8 +2,13 @@ import { Navigate, Route, Routes } from 'react-router-dom';
 
 import { AdminConsole } from './components/AdminConsole';
 import { AuthProvider } from './contexts/AuthContext';
+import { ForumLayout } from './layouts/ForumLayout';
 import { WorkspaceLayout } from './layouts/WorkspaceLayout';
 import { LandingPage } from './pages/LandingPage';
+import { ForumCategoryPage } from './pages/forum/ForumCategoryPage';
+import { ForumIndexPage } from './pages/forum/ForumIndexPage';
+import { ForumNewPostPage } from './pages/forum/ForumNewPostPage';
+import { ForumPostDetailPage } from './pages/forum/ForumPostDetailPage';
 import { AnalyticsPage } from './pages/workspace/AnalyticsPage';
 import { IdentityPage } from './pages/workspace/IdentityPage';
 import { MatchesPage } from './pages/workspace/MatchesPage';
@@ -31,12 +36,16 @@ export default function App() {
                     <Route path="analytics" element={<AnalyticsPage />} />
                 </Route>
 
-                {/* Forum routes — added in Phase 5 */}
+                <Route path="/forum" element={<ForumLayout />}>
+                    <Route index element={<ForumIndexPage />} />
+                    <Route path="new" element={<ForumNewPostPage />} />
+                    <Route path=":category" element={<ForumCategoryPage />} />
+                </Route>
+                <Route path="/forum/post/:id" element={<ForumPostDetailPage />} />
 
                 <Route path="/admin" element={<AdminConsole />} />
                 <Route path="/admin/*" element={<AdminConsole />} />
 
-                {/* Catch-all — send unknown paths home */}
                 <Route path="*" element={<Navigate to="/" replace />} />
             </Routes>
         </AuthProvider>

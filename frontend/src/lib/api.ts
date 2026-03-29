@@ -17,10 +17,13 @@ import type {
   AutoMatchResult,
   ChatPresenceResponse,
   ChemistryTestResponse,
+  CommentResponse,
   DatingProfileUpdate,
+  ForumCategoryInfo,
   HeatmapCell,
   HumanUserLoginResponse,
   HumanUserResponse,
+  ImageUploadResponse,
   MatchGraph,
   PasswordResetResponse,
   MatchDetail,
@@ -33,11 +36,15 @@ import type {
   OnboardingResponse,
   PortraitResponse,
   PortraitStructuredPrompt,
+  PostDetailResponse,
+  PostListResponse,
+  PostResponse,
   RegistrationResponse,
   SampleSoulResponse,
   SwipeQueueItem,
   SwipeResponse,
   SwipeState,
+  VoteResponse,
   SwipeUndoResponse,
   VibePreview,
 } from './types';
@@ -608,4 +615,141 @@ export async function getUserAgents(userToken: string): Promise<AgentResponse[]>
   } catch {
     return [];
   }
+}
+
+// ---------------------------------------------------------------------------
+// Forum API
+// ---------------------------------------------------------------------------
+
+export async function getForumCategories(): Promise<ForumCategoryInfo[]> {
+  const response = await apiFetch('/api/forum/categories');
+  if (!response.ok) await readError(response);
+  return response.json() as Promise<ForumCategoryInfo[]>;
+}
+
+export async function getForumPosts(params: {
+  sort?: 'hot' | 'new' | 'top';
+  category?: string;
+  before?: string;
+  limit?: number;
+}, token?: string): Promise<PostListResponse> {
+  const qs = new URLSearchParams();
+  if (params.sort) qs.set('sort', params.sort);
+  if (params.category) qs.set('category', params.category);
+  if (params.before) qs.set('before', params.before);
+  if (params.limit) qs.set('limit', String(params.limit));
+  const headers: Record<string, string> = {};
+  if (token) headers.Authorization = `Bearer ${token}`;
+  const response = await apiFetch(`/api/forum/posts?${qs.toString()}`, { headers });
+  if (!response.ok) await readError(response);
+  return response.json() as Promise<PostListResponse>;
+}
+
+export async function getForumPost(postId: string, token?: string): Promise<PostDetailResponse> {
+  const headers: Record<string, string> = {};
+  if (token) headers.Authorization = `Bearer ${token}`;
+  const response = await apiFetch(`/api/forum/posts/${postId}`, { headers });
+  if (!response.ok) await readError(response);
+  return response.json() as Promise<PostDetailResponse>;
+}
+
+export async function createForumPost(
+  payload: { title: string; body: string; category: string; image_url?: string },
+  token: string,
+): Promise<PostResponse> {
+  const response = await apiFetch('/api/forum/posts', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+    body: JSON.stringify(payload),
+  });
+  if (!response.ok) await readError(response);
+  return response.json() as Promise<PostResponse>;
+}
+
+export async function updateForumPost(
+  postId: string,
+  payload: { title?: string; body?: string; category?: string },
+  token: string,
+): Promise<PostResponse> {
+  const response = await apiFetch(`/api/forum/posts/${postId}`, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+    body: JSON.stringify(payload),
+  });
+  if (!response.ok) await readError(response);
+  return response.json() as Promise<PostResponse>;
+}
+
+export async function deleteForumPost(postId: string, token: string): Promise<void> {
+  const response = await apiFetch(`/api/forum/posts/${postId}`, {
+    method: 'DELETE',
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  if (!response.ok) await readError(response);
+}
+
+export async function voteOnPost(postId: string, value: number, token: string): Promise<VoteResponse> {
+  const response = await apiFetch(`/api/forum/posts/${postId}/vote`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+    body: JSON.stringify({ value }),
+  });
+  if (!response.ok) await readError(response);
+  return response.json() as Promise<VoteResponse>;
+}
+
+export async function createComment(
+  postId: string,
+  payload: { body: string; parent_id?: string },
+  token: string,
+): Promise<CommentResponse> {
+  const response = await apiFetch(`/api/forum/posts/${postId}/comments`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+    body: JSON.stringify(payload),
+  });
+  if (!response.ok) await readError(response);
+  return response.json() as Promise<CommentResponse>;
+}
+
+export async function voteOnComment(commentId: string, value: number, token: string): Promise<VoteResponse> {
+  const response = await apiFetch(`/api/forum/comments/${commentId}/vote`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+    body: JSON.stringify({ value }),
+  });
+  if (!response.ok) await readError(response);
+  return response.json() as Promise<VoteResponse>;
+}
+
+export async function deleteForumComment(commentId: string, token: string): Promise<void> {
+  const response = await apiFetch(`/api/forum/comments/${commentId}`, {
+    method: 'DELETE',
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  if (!response.ok) await readError(response);
+}
+
+export async function uploadForumImage(postId: string, file: File, token: string): Promise<ImageUploadResponse> {
+  const formData = new FormData();
+  formData.append('file', file);
+  const response = await apiFetch(`/api/forum/posts/${postId}/upload-image`, {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${token}` },
+    body: formData,
+  });
+  if (!response.ok) await readError(response);
+  return response.json() as Promise<ImageUploadResponse>;
+}
+
+export function getForumPostWebSocketUrl(postId: string, token?: string): string {
+  const base = API_BASE_URL.replace(/^http/, 'ws');
+  const qs = token ? `?token=${encodeURIComponent(token)}` : '';
+  return `${base}/api/forum/ws/post/${postId}${qs}`;
+}
+
+export function getForumFeedWebSocketUrl(token?: string): string {
+  const base = API_BASE_URL.replace(/^http/, 'ws');
+  const qs = token ? `?token=${encodeURIComponent(token)}` : '';
+  return `${base}/api/forum/ws/feed${qs}`;
 }
