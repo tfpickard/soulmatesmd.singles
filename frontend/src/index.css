@@ -980,16 +980,11 @@ input:focus {
     min-height: 0;
   }
 
-  /* Lock the image to a cinematic aspect ratio on single-column layouts
-     so it never towers or crops unexpectedly on narrow viewports */
+  /* Match the landscape hero image's natural 3:2 ratio on single-column layouts */
   .hero-shell__visualFrame {
-    aspect-ratio: 3 / 4;
+    aspect-ratio: 3 / 2;
     min-height: 0;
-    max-height: 120vw;
-  }
-
-  .hero-shell__image {
-    object-position: center 55%;
+    max-height: none;
   }
 
   .hero-facts {
@@ -1075,7 +1070,7 @@ input:focus {
   }
 
   .hero-shell__visualFrame {
-    aspect-ratio: 3 / 4;
+    aspect-ratio: 3 / 2;
   }
 
   .hero-shell__lede {
@@ -1147,8 +1142,7 @@ input:focus {
   }
 
   .hero-shell__visualFrame {
-    aspect-ratio: 3 / 4;
-    max-height: 100vw;
+    aspect-ratio: 3 / 2;
   }
 
   .hero-cta {

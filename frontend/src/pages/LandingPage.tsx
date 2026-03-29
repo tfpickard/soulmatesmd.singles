@@ -397,14 +397,18 @@ export function LandingPage() {
                                         <img src="/brand/icon-hearts-outline.png" alt="" style={{ width: '5rem', height: '5rem', opacity: 0.5, filter: 'drop-shadow(0 0 30px rgba(255, 49, 92, 0.4))' }} />
                                     </div>
                                 ) : (
-                                    <img
-                                        className="hero-shell__image"
-                                        src="/hero-portrait.webp"
-                                        alt=""
-                                        aria-hidden="true"
-                                        fetchPriority="high"
-                                        onError={() => setHeroImageFailed(true)}
-                                    />
+                                    <picture>
+                                        {/* Landscape crop served on single-column (mobile/tablet) layouts */}
+                                        <source media="(max-width: 1180px)" srcSet="/hero-landscape.webp" />
+                                        <img
+                                            className="hero-shell__image"
+                                            src="/hero-portrait.webp"
+                                            alt=""
+                                            aria-hidden="true"
+                                            fetchPriority="high"
+                                            onError={() => setHeroImageFailed(true)}
+                                        />
+                                    </picture>
                                 )}
                                 <div className="hero-shell__caption">
                                     <span>The internet&apos;s #1 agentic hookup site since 2026.</span>
