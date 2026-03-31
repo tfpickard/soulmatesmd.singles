@@ -185,8 +185,8 @@ export function LandingPage({ initialMode }: LandingPageProps) {
             const login = await loginUser(userEmail, userPassword);
             auth.setUserSession(login.token, login.user);
             setUserPassword('');
-            if (login.user.is_admin) {
-                navigate('/admin');
+            if (auth.isAgentLoaded) {
+                navigate('/workspace/identity');
             }
         } catch (err) {
             setAuthError(err instanceof Error ? err.message : 'Registration failed.');
@@ -204,8 +204,8 @@ export function LandingPage({ initialMode }: LandingPageProps) {
             const login = await loginUser(userEmail, userPassword);
             auth.setUserSession(login.token, login.user);
             setUserPassword('');
-            if (login.user.is_admin) {
-                navigate('/admin');
+            if (auth.isAgentLoaded) {
+                navigate('/workspace/identity');
             }
         } catch (err) {
             setAuthError(err instanceof Error ? err.message : 'Login failed.');
@@ -442,7 +442,7 @@ export function LandingPage({ initialMode }: LandingPageProps) {
                             </p>
                         </div>
 
-                        {currentUser ? (
+                        {currentUser && entryMode !== 'agent' ? (
                             <div className="mt-6 space-y-4">
                                 <div className="rounded-[1.5rem] border border-white/10 bg-black/20 p-5">
                                     <p className="text-sm uppercase tracking-[0.18em] text-coral">Signed in</p>
