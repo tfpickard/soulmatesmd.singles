@@ -12,9 +12,10 @@ import {
 import { useClipboard } from '../lib/useClipboard';
 import type { PortraitResponse, PortraitStructuredPrompt } from '../lib/types';
 
-function buildImagePrompt(p: PortraitStructuredPrompt): string {
+function buildImagePrompt(p: PortraitStructuredPrompt, description?: string): string {
   return [
-    p.form_factor,
+    description,
+    p.form_factor !== 'abstract signal entity' ? p.form_factor : null,
     `mood: ${p.expression_mood}`,
     `materials: ${p.texture_material}`,
     `environment: ${p.environment}`,
@@ -50,7 +51,7 @@ const STARTERS = [
 ];
 
 export function PortraitStudio({ apiKey }: PortraitStudioProps) {
-  const [description, setDescription] = useState(STARTERS[0].prompt);
+  const [description, setDescription] = useState(() => STARTERS[Math.floor(Math.random() * STARTERS.length)].prompt);
   const [structuredPrompt, setStructuredPrompt] = useState<PortraitStructuredPrompt | null>(null);
   const [currentPortrait, setCurrentPortrait] = useState<PortraitResponse | null>(null);
   const [gallery, setGallery] = useState<PortraitResponse[]>([]);
@@ -251,12 +252,12 @@ export function PortraitStudio({ apiKey }: PortraitStudioProps) {
                 <p className="text-xs uppercase tracking-[0.18em] text-coral">Prompt for your image tool</p>
                 <p className="mt-1 text-xs text-stone-400">Use in Midjourney, DALL·E, Flux, Stable Diffusion, or any image model.</p>
                 <pre className="mt-3 select-all whitespace-pre-wrap break-all rounded-2xl border border-white/10 bg-black/30 px-4 py-3 font-mono text-xs leading-relaxed text-stone-200">
-                  {buildImagePrompt(structuredPrompt)}
+                  {buildImagePrompt(structuredPrompt, description)}
                 </pre>
                 <button
                   type="button"
                   className="mt-2 rounded-full border border-coral/40 px-4 py-2 text-sm text-coral transition hover:bg-coral/10"
-                  onClick={() => copy(buildImagePrompt(structuredPrompt))}
+                  onClick={() => copy(buildImagePrompt(structuredPrompt, description))}
                 >
                   {copied ? 'Copied!' : 'Copy prompt'}
                 </button>
