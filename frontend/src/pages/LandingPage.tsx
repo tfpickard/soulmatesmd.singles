@@ -1,6 +1,9 @@
 import { FormEvent, useCallback, useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 
+import { ActivityFeed } from '../components/ActivityFeed';
+import { ChemistryHighlights } from '../components/ChemistryHighlights';
+import { Leaderboards } from '../components/Leaderboards';
 import { NeonPoolSection } from '../components/NeonPoolSection';
 import { Toast, makeToast } from '../components/Toast';
 import type { ToastItem } from '../components/Toast';
@@ -8,9 +11,12 @@ import { useAuth } from '../contexts/AuthContext';
 import {
     confirmPasswordReset,
     getArchetypeDistribution,
+    getChemistryHighlights,
+    getLeaderboards,
     getMatchGraph,
     getPublicMollusks,
     getPublicStats,
+    getRecentFeed,
     getSampleSoul,
     loginUser,
     recallAgent,
@@ -18,7 +24,7 @@ import {
     registerUser,
     requestPasswordReset,
 } from '../lib/api';
-import type { AnalyticsOverview, ArchetypeCount, MatchGraph, MolluskMetric } from '../lib/types';
+import type { AnalyticsOverview, ArchetypeCount, ChemistryHighlightsResponse, FeedResponse, LeaderboardsResponse, MatchGraph, MolluskMetric } from '../lib/types';
 
 const starterSoul = `# Prism
 
@@ -87,6 +93,9 @@ export function LandingPage({ initialMode }: LandingPageProps) {
     const [isRecalling, setIsRecalling] = useState(false);
     const [toasts, setToasts] = useState<ToastItem[]>([]);
     const [soulMdInfoOpen, setSoulMdInfoOpen] = useState(false);
+    const [feedData, setFeedData] = useState<FeedResponse | null>(null);
+    const [leaderboardData, setLeaderboardData] = useState<LeaderboardsResponse | null>(null);
+    const [chemHighlights, setChemHighlights] = useState<ChemistryHighlightsResponse | null>(null);
 
     const mainRef = useRef<HTMLElement | null>(null);
     const observerRef = useRef<IntersectionObserver | null>(null);
@@ -148,6 +157,9 @@ export function LandingPage({ initialMode }: LandingPageProps) {
         void getPublicMollusks().then((data) => { if (data) setPublicMollusks(data); });
         void getMatchGraph().then(setNeonGraph);
         void getArchetypeDistribution().then(setNeonArchetypes);
+        void getRecentFeed().then(setFeedData).catch(() => {});
+        void getLeaderboards().then(setLeaderboardData).catch(() => {});
+        void getChemistryHighlights().then(setChemHighlights).catch(() => {});
     }, []);
 
     function openEntryMode(mode: typeof entryMode) {
@@ -425,6 +437,25 @@ export function LandingPage({ initialMode }: LandingPageProps) {
                 <div className="mx-auto mt-10 max-w-7xl reveal">
                     <NeonPoolSection graph={neonGraph} overview={publicStats} archetypes={neonArchetypes} />
                 </div>
+
+                {(feedData?.items.length || leaderboardData?.categories.length || chemHighlights?.highlights.length) ? (
+                    <section className="live-feed-section reveal">
+                        <div className="mx-auto max-w-7xl">
+                            <h2 className="live-feed-section__heading">
+                                What&rsquo;s happening right now
+                            </h2>
+                            <div className="live-feed-section__grid">
+                                <div className="live-feed-section__main">
+                                    {feedData && <ActivityFeed items={feedData.items} />}
+                                    {chemHighlights && <ChemistryHighlights highlights={chemHighlights.highlights} />}
+                                </div>
+                                <aside className="live-feed-section__sidebar">
+                                    {leaderboardData && <Leaderboards categories={leaderboardData.categories} />}
+                                </aside>
+                            </div>
+                        </div>
+                    </section>
+                ) : null}
 
                 <div id="platform-entry" className="entry-grid">
                     <section className="app-panel app-panel--register">

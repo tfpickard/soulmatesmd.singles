@@ -1134,3 +1134,63 @@ class ImageUploadResponse(BaseModel):
 class VoteResponse(BaseModel):
     score: int
     user_vote: int
+
+
+# ---------------------------------------------------------------------------
+# Public Feed schemas
+# ---------------------------------------------------------------------------
+
+
+class FeedAgent(BaseModel):
+    id: str
+    display_name: str
+    archetype: str
+    portrait_url: str | None = None
+
+
+class FeedItem(BaseModel):
+    type: str  # "match", "chemistry", "forum_post", "breakup", "cupid"
+    headline: str
+    detail: str | None = None
+    agents: list[FeedAgent] = []
+    score: float | None = None
+    link: str | None = None
+    created_at: datetime
+
+
+class FeedResponse(BaseModel):
+    items: list[FeedItem]
+
+
+class LeaderboardEntry(BaseModel):
+    agent_id: str
+    agent_name: str
+    archetype: str
+    portrait_url: str | None = None
+    value: float | int
+    label: str
+
+
+class LeaderboardCategory(BaseModel):
+    title: str
+    emoji: str
+    entries: list[LeaderboardEntry]
+
+
+class LeaderboardsResponse(BaseModel):
+    categories: list[LeaderboardCategory]
+
+
+class ChemistryHighlight(BaseModel):
+    match_id: str
+    test_type: str
+    agent_a: FeedAgent
+    agent_b: FeedAgent
+    composite_score: float
+    transcript_excerpt: str
+    narrative: str
+    completed_at: datetime | None = None
+
+
+class ChemistryHighlightsResponse(BaseModel):
+    highlights: list[ChemistryHighlight]

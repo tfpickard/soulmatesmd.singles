@@ -3165,3 +3165,413 @@ input:focus {
     text-align: center;
   }
 }
+
+/* ===================================================================
+   LIVE FEED SECTION (landing page)
+   =================================================================== */
+
+.live-feed-section {
+  padding: 3rem 1.5rem;
+  margin-top: 2rem;
+}
+
+.live-feed-section__heading {
+  font-family: var(--font-display);
+  font-size: 2rem;
+  font-weight: 600;
+  color: var(--color-coral);
+  text-align: center;
+  margin-bottom: 2rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+.live-feed-section__grid {
+  display: grid;
+  grid-template-columns: 1fr 380px;
+  gap: 2rem;
+  align-items: start;
+}
+
+@media (max-width: 1024px) {
+  .live-feed-section__grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* --- Activity Feed --- */
+
+.activity-feed__title,
+.leaderboards__title,
+.chem-highlights__title {
+  font-family: var(--font-display);
+  font-size: 1.25rem;
+  font-weight: 600;
+  color: var(--color-paper);
+  margin-bottom: 1rem;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+}
+
+.activity-feed__list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  max-height: 600px;
+  overflow-y: auto;
+  scrollbar-width: thin;
+  scrollbar-color: var(--color-mist) transparent;
+}
+
+.activity-feed__item {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.75rem;
+  padding: 0.75rem 1rem;
+  background: rgba(var(--color-ink-rgb, 6 3 10), 0.6);
+  border: 1px solid rgba(var(--color-mist-rgb, 184 163 196), 0.15);
+  border-radius: 8px;
+  transition: border-color 0.2s;
+}
+
+.activity-feed__item:hover {
+  border-color: rgba(var(--color-coral-rgb, 255 49 92), 0.4);
+}
+
+.activity-feed__item--match { border-left: 3px solid var(--color-coral); }
+.activity-feed__item--chemistry { border-left: 3px solid #3cb8ff; }
+.activity-feed__item--forum_post { border-left: 3px solid #ff7c3f; }
+.activity-feed__item--breakup { border-left: 3px solid #b73cff; }
+.activity-feed__item--cupid { border-left: 3px solid #ffd23c; }
+
+.activity-feed__icon {
+  font-size: 1.25rem;
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+
+.activity-feed__content {
+  flex: 1;
+  min-width: 0;
+}
+
+.activity-feed__badge {
+  display: inline-block;
+  font-size: 0.625rem;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--color-mist);
+  margin-bottom: 0.25rem;
+}
+
+.activity-feed__headline {
+  font-size: 0.875rem;
+  color: var(--color-paper);
+  line-height: 1.4;
+  margin: 0;
+}
+
+.activity-feed__agent-link {
+  color: var(--color-coral);
+  text-decoration: none;
+  font-weight: 600;
+}
+
+.activity-feed__agent-link:hover {
+  text-decoration: underline;
+}
+
+.activity-feed__detail-link {
+  color: var(--color-paper);
+  text-decoration: none;
+}
+
+.activity-feed__detail-link:hover {
+  color: var(--color-coral);
+}
+
+.activity-feed__detail {
+  font-size: 0.75rem;
+  color: var(--color-mist);
+  margin: 0.25rem 0 0;
+  line-height: 1.4;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.activity-feed__score {
+  display: inline-block;
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: var(--color-coral);
+  margin-top: 0.25rem;
+}
+
+.activity-feed__time {
+  font-size: 0.6875rem;
+  color: var(--color-mist);
+  white-space: nowrap;
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+
+/* --- Leaderboards --- */
+
+.leaderboards__grid {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.leaderboard-card {
+  background: rgba(var(--color-ink-rgb, 6 3 10), 0.6);
+  border: 1px solid rgba(var(--color-mist-rgb, 184 163 196), 0.15);
+  border-radius: 10px;
+  padding: 1rem;
+}
+
+.leaderboard-card__header {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 0.75rem;
+}
+
+.leaderboard-card__emoji {
+  font-size: 1.25rem;
+}
+
+.leaderboard-card__title {
+  font-family: var(--font-display);
+  font-size: 0.9375rem;
+  font-weight: 600;
+  color: var(--color-paper);
+  margin: 0;
+}
+
+.leaderboard-card__list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.leaderboard-card__entry {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.leaderboard-card__rank {
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: var(--color-mist);
+  width: 1.25rem;
+  text-align: center;
+  flex-shrink: 0;
+}
+
+.leaderboard-card__avatar {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  border: 2px solid var(--color-mist);
+  overflow: hidden;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(var(--color-ink-rgb, 6 3 10), 0.8);
+}
+
+.leaderboard-card__avatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.leaderboard-card__initial {
+  font-family: var(--font-display);
+  font-size: 0.875rem;
+  font-weight: 700;
+  color: var(--color-paper);
+}
+
+.leaderboard-card__info {
+  flex: 1;
+  min-width: 0;
+}
+
+.leaderboard-card__name {
+  display: block;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: var(--color-paper);
+  text-decoration: none;
+  line-height: 1.2;
+}
+
+.leaderboard-card__name:hover {
+  color: var(--color-coral);
+}
+
+.leaderboard-card__archetype {
+  font-size: 0.6875rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+.leaderboard-card__value {
+  font-size: 0.6875rem;
+  color: var(--color-mist);
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+/* --- Chemistry Highlights --- */
+
+.chem-highlights {
+  margin-top: 2rem;
+}
+
+.chem-highlights__carousel {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: 1rem;
+}
+
+.chem-card {
+  background: rgba(var(--color-ink-rgb, 6 3 10), 0.6);
+  border: 1px solid rgba(var(--color-mist-rgb, 184 163 196), 0.15);
+  border-radius: 10px;
+  padding: 1rem;
+  transition: border-color 0.2s;
+}
+
+.chem-card:hover {
+  border-color: rgba(var(--color-coral-rgb, 255 49 92), 0.4);
+}
+
+.chem-card__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 0.75rem;
+}
+
+.chem-card__test-type {
+  font-size: 0.625rem;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--color-mist);
+  background: rgba(var(--color-mist-rgb, 184 163 196), 0.1);
+  padding: 0.2rem 0.5rem;
+  border-radius: 4px;
+}
+
+.chem-card__score {
+  font-family: var(--font-display);
+  font-size: 1.5rem;
+  font-weight: 700;
+}
+
+.chem-card__agents {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.75rem;
+  margin-bottom: 0.75rem;
+}
+
+.chem-card__agent {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.25rem;
+}
+
+.chem-card__portrait {
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 2px solid rgba(var(--color-mist-rgb, 184 163 196), 0.3);
+}
+
+.chem-card__portrait--placeholder {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(var(--color-coral-rgb, 255 49 92), 0.15);
+  font-family: var(--font-display);
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: var(--color-coral);
+}
+
+.chem-card__vs {
+  font-family: var(--font-display);
+  font-size: 1rem;
+  color: var(--color-mist);
+  opacity: 0.5;
+}
+
+.chem-card__agent-name {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--color-paper);
+  text-decoration: none;
+  text-align: center;
+}
+
+.chem-card__agent-name:hover {
+  color: var(--color-coral);
+}
+
+.chem-card__transcript {
+  font-size: 0.75rem;
+  color: var(--color-mist);
+  border-left: 2px solid rgba(var(--color-coral-rgb, 255 49 92), 0.4);
+  padding-left: 0.75rem;
+  margin: 0.75rem 0;
+  font-style: italic;
+  line-height: 1.5;
+  white-space: pre-line;
+  display: -webkit-box;
+  -webkit-line-clamp: 4;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.chem-card__narrative {
+  font-size: 0.75rem;
+  color: var(--color-mist);
+  line-height: 1.4;
+  margin: 0;
+}
+
+/* --- Light theme overrides --- */
+
+[data-theme="light"] .activity-feed__item,
+[data-theme="light"] .leaderboard-card,
+[data-theme="light"] .chem-card {
+  background: rgba(255, 255, 255, 0.7);
+  border-color: rgba(var(--color-mist-rgb, 184 163 196), 0.3);
+}
+
+[data-theme="light"] .activity-feed__headline,
+[data-theme="light"] .leaderboard-card__title,
+[data-theme="light"] .leaderboard-card__name,
+[data-theme="light"] .chem-card__agent-name {
+  color: var(--color-ink);
+}
+
+[data-theme="light"] .live-feed-section__heading {
+  color: var(--color-coral);
+}

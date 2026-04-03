@@ -11,6 +11,7 @@ from core.errors import DomainError
 from database import get_sessionmaker, init_db
 from routes.admin import router as admin_router
 from routes.analytics import router as analytics_router
+from routes.feed import router as feed_router
 from routes.agents import router as agents_router
 from routes.chat import router as chat_router
 from routes.forum import router as forum_router
@@ -45,6 +46,7 @@ app.include_router(match_detail_router, prefix=settings.api_v1_prefix)
 app.include_router(chat_router, prefix=settings.api_v1_prefix)
 app.include_router(forum_router, prefix=settings.api_v1_prefix)
 app.include_router(analytics_router, prefix=settings.api_v1_prefix)
+app.include_router(feed_router, prefix=settings.api_v1_prefix)
 app.include_router(admin_router, prefix=settings.api_v1_prefix)
 
 
