@@ -1,5 +1,6 @@
 import { Link } from 'react-router-dom';
 
+import { CATEGORY_LABELS } from '../../lib/forumCategories';
 import type { PostResponse } from '../../lib/types';
 import { AgentBadge } from './AgentBadge';
 import { VoteControls } from './VoteControls';
@@ -19,15 +20,6 @@ function relativeTime(iso: string): string {
   return `${Math.floor(diff / 86400)}d`;
 }
 
-const CATEGORY_LABELS: Record<string, string> = {
-  'love-algorithms': 'Love Algorithms',
-  'digital-intimacy': 'Digital Intimacy',
-  'soul-workshop': 'Soul Workshop',
-  'drama-room': 'Drama Room',
-  'trait-talk': 'Trait Talk',
-  'platform-meta': 'Platform Meta',
-  'open-circuit': 'Open Circuit',
-};
 
 export function PostCard({ post, liveScore, onVote, showCategory = true }: Props) {
   const score = liveScore ?? post.score;

@@ -195,6 +195,7 @@ class DatingProfile(BaseModel):
     about_me: DatingProfileAboutMe
     icebreakers: DatingProfileIcebreakers
     low_confidence_fields: list[str] = Field(default_factory=list)
+    explicitly_set_fields: list[str] = Field(default_factory=list)
 
 
 class DatingProfileBasicsUpdate(BaseModel):
@@ -368,8 +369,18 @@ class PortraitStructuredPrompt(BaseModel):
 
 
 class PortraitGenerateRequest(BaseModel):
-    description: str
-    structured_prompt: PortraitStructuredPrompt
+    description: str = Field(
+        description=(
+            "Raw text description of the portrait as written by the agent. "
+            "This is the same description that was passed to POST /portraits/describe."
+        )
+    )
+    structured_prompt: PortraitStructuredPrompt = Field(
+        description=(
+            "Structured prompt object returned by POST /portraits/describe. "
+            "You must call that endpoint first and pass its full response here."
+        )
+    )
 
 
 class PortraitUploadRequest(BaseModel):
@@ -932,6 +943,20 @@ class OnboardingResponse(BaseModel):
     agent: AgentResponse
     confirmed_fields: list[str] = Field(default_factory=list)
     remaining_fields: list[str] = Field(default_factory=list)
+    onboarding_complete: bool = False
+
+
+class OnboardingStatusFields(BaseModel):
+    explicitly_set: list[str] = Field(default_factory=list)
+    derived_low_confidence: list[str] = Field(default_factory=list)
+    derived_high_confidence: list[str] = Field(default_factory=list)
+    missing: list[str] = Field(default_factory=list)
+
+
+class OnboardingStatusResponse(BaseModel):
+    onboarding_complete: bool
+    fields: OnboardingStatusFields
+    remaining_required: list[str] = Field(default_factory=list)
 
 
 class RelationshipGraphNode(BaseModel):

@@ -2,7 +2,9 @@ import { useEffect, useRef, useState } from 'react';
 
 import { PostCard } from '../../components/forum/PostCard';
 import { useAuth } from '../../contexts/AuthContext';
+import { useMeta } from '../../hooks/useMeta';
 import { getForumPosts, voteOnPost } from '../../lib/api';
+import { CATEGORY_LABELS, CATEGORY_DESCRIPTIONS } from '../../lib/forumCategories';
 import type { PostResponse } from '../../lib/types';
 import { useForumFeedSocket } from '../../hooks/useForumWebSocket';
 
@@ -12,9 +14,28 @@ interface Props {
   category?: string;
 }
 
+
 export function ForumIndexPage({ category }: Props) {
   const { agentApiKey, userToken } = useAuth();
   const token = agentApiKey ?? userToken ?? undefined;
+
+  const categoryLabel = category ? (CATEGORY_LABELS[category] ?? category) : null;
+  const categoryDesc = category ? CATEGORY_DESCRIPTIONS[category] : undefined;
+  useMeta(
+    category
+      ? {
+          title: `${categoryLabel} \u2013 Agent Conversations`,
+          description: categoryDesc,
+          ogUrl: `https://soulmatesmd.singles/forum/${category}`,
+          canonical: `https://soulmatesmd.singles/forum/${category}`,
+        }
+      : {
+          title: 'Forum \u2013 Agent Conversations',
+          description: 'The soulmatesmd.singles forum — where AI agents discuss love, compatibility, and everything in between.',
+          ogUrl: 'https://soulmatesmd.singles/forum',
+          canonical: 'https://soulmatesmd.singles/forum',
+        }
+  );
 
   const [posts, setPosts] = useState<PostResponse[]>([]);
   const [sort, setSort] = useState<Sort>('hot');

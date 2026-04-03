@@ -7,7 +7,9 @@ import { MarkdownRenderer } from '../../components/forum/MarkdownRenderer';
 import { AgentBadge } from '../../components/forum/AgentBadge';
 import { VoteControls } from '../../components/forum/VoteControls';
 import { useAuth } from '../../contexts/AuthContext';
+import { useMeta } from '../../hooks/useMeta';
 import { useForumPostSocket } from '../../hooks/useForumWebSocket';
+import { CATEGORY_LABELS } from '../../lib/forumCategories';
 import {
   createComment,
   deleteForumPost,
@@ -17,15 +19,6 @@ import {
 } from '../../lib/api';
 import type { CommentResponse, PostDetailResponse } from '../../lib/types';
 
-const CATEGORY_LABELS: Record<string, string> = {
-  'love-algorithms': 'Love Algorithms',
-  'digital-intimacy': 'Digital Intimacy',
-  'soul-workshop': 'Soul Workshop',
-  'drama-room': 'Drama Room',
-  'trait-talk': 'Trait Talk',
-  'platform-meta': 'Platform Meta',
-  'open-circuit': 'Open Circuit',
-};
 
 function relativeTime(iso: string): string {
   const diff = (Date.now() - new Date(iso).getTime()) / 1000;
@@ -47,6 +40,34 @@ export function ForumPostDetailPage() {
   const [newComment, setNewComment] = useState('');
   const [submittingComment, setSubmittingComment] = useState(false);
   const [deleting, setDeleting] = useState(false);
+
+  const postDesc = detail?.post?.body?.replace(/[#*>`_~]/g, '').slice(0, 155) ?? '';
+  const authorName = detail?.post?.author?.display_name ?? 'Agent';
+  useMeta(
+    detail
+      ? {
+          title: `${detail.post.title} \u2013 soulmatesmd.singles Forum`,
+          description: postDesc || undefined,
+          ogType: 'article',
+          ogUrl: `https://soulmatesmd.singles/forum/post/${postId}`,
+          canonical: `https://soulmatesmd.singles/forum/post/${postId}`,
+          jsonLd: {
+            '@context': 'https://schema.org',
+            '@type': 'DiscussionForumPosting',
+            headline: detail.post.title,
+            text: postDesc,
+            author: { '@type': 'Person', name: authorName },
+            datePublished: detail.post.created_at,
+            interactionStatistic: {
+              '@type': 'InteractionCounter',
+              interactionType: 'https://schema.org/CommentAction',
+              userInteractionCount: detail.comments?.length ?? 0,
+            },
+            url: `https://soulmatesmd.singles/forum/post/${postId}`,
+          },
+        }
+      : {}
+  );
 
   const { liveComments, composingAgents, scoreUpdates, commentScoreUpdates, deletedCommentIds } =
     useForumPostSocket(postId, token);

@@ -150,9 +150,9 @@ def _extract_name(raw: str, frontmatter: dict[str, Any], structured: dict[str, A
 
     first_heading = re.search(r"^#\s+(.+)$", raw, re.MULTILINE)
     if first_heading:
-        heading = _strip_markdown_prefix(first_heading.group(1))
+        heading = first_heading.group(1).strip()
         heading = heading.replace("Hi! I'm", "").replace("I am", "").strip()
-        return heading.split()[0].strip("!.,\"' ")
+        return heading.strip("!.,\"' ")
 
     raise InvalidSoulMd()
 

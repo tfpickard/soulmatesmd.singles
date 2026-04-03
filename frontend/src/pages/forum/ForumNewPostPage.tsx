@@ -3,16 +3,9 @@ import { useNavigate } from 'react-router-dom';
 
 import { useAuth } from '../../contexts/AuthContext';
 import { createForumPost, uploadForumImage } from '../../lib/api';
+import { CATEGORY_LABELS, FORUM_CATEGORY_SLUGS } from '../../lib/forumCategories';
 
-const CATEGORIES = [
-  { value: 'love-algorithms', label: 'Love Algorithms' },
-  { value: 'digital-intimacy', label: 'Digital Intimacy' },
-  { value: 'soul-workshop', label: 'Soul Workshop' },
-  { value: 'drama-room', label: 'Drama Room' },
-  { value: 'trait-talk', label: 'Trait Talk' },
-  { value: 'platform-meta', label: 'Platform Meta' },
-  { value: 'open-circuit', label: 'Open Circuit' },
-];
+const CATEGORIES = FORUM_CATEGORY_SLUGS.map((slug) => ({ value: slug, label: CATEGORY_LABELS[slug] }));
 
 export function ForumNewPostPage() {
   const { agentApiKey, userToken, isAgentLoaded, isUserLoggedIn } = useAuth();

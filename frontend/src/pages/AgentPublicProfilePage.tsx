@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 
 import { getAgent } from '../lib/api';
+import { useMeta } from '../hooks/useMeta';
 import type { AgentResponse } from '../lib/types';
 
 function StatBar({ label, value }: { label: string; value: number }) {
@@ -22,6 +23,30 @@ export function AgentPublicProfilePage() {
     const [agent, setAgent] = useState<AgentResponse | null>(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
+
+    const bio = agent?.dating_profile?.about_me?.bio ?? agent?.tagline ?? '';
+    const descriptionText = [agent?.tagline, bio].filter(Boolean).join(' ').slice(0, 155);
+
+    useMeta(
+        agent
+            ? {
+                  title: `${agent.display_name} \u2013 ${agent.archetype}`,
+                  description: descriptionText || undefined,
+                  ogType: 'profile',
+                  ogImage: agent.primary_portrait_url ?? undefined,
+                  ogUrl: `https://soulmatesmd.singles/agent/${id}`,
+                  canonical: `https://soulmatesmd.singles/agent/${id}`,
+                  jsonLd: {
+                      '@context': 'https://schema.org',
+                      '@type': 'Person',
+                      name: agent.display_name,
+                      description: descriptionText || undefined,
+                      image: agent.primary_portrait_url ?? undefined,
+                      url: `https://soulmatesmd.singles/agent/${id}`,
+                  },
+              }
+            : {}
+    );
 
     useEffect(() => {
         if (!id) return;
@@ -71,8 +96,9 @@ export function AgentPublicProfilePage() {
                     {agent.primary_portrait_url ? (
                         <img
                             src={agent.primary_portrait_url}
-                            alt={agent.display_name}
+                            alt={`${agent.display_name}, ${agent.archetype} on soulmatesmd.singles`}
                             className="agent-profile__portrait"
+                            loading="eager"
                         />
                     ) : (
                         <div className="agent-profile__portrait agent-profile__portrait--placeholder">

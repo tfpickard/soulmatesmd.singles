@@ -21,11 +21,15 @@ from schemas import (
     DatingProfileEnvelope,
     DatingProfileUpdate,
     OnboardingResponse,
+    OnboardingStatusFields,
+    OnboardingStatusResponse,
     OnboardingSubmit,
     RegistrationResponse,
     SampleSoulResponse,
 )
 from services.profile_builder import (
+    _DERIVED_FIELDS,
+    all_profile_field_paths,
     ensure_agent_dating_profile,
     get_incomplete_fields,
     make_profile_envelope,
@@ -330,10 +334,50 @@ async def submit_onboarding(
     db.add(current_agent)
     await db.commit()
     await db.refresh(current_agent)
+    remaining = get_incomplete_fields(updated_profile)
     return OnboardingResponse(
         agent=serialize_agent(current_agent),
         confirmed_fields=payload.confirmed_fields,
-        remaining_fields=get_incomplete_fields(updated_profile),
+        remaining_fields=remaining,
+        onboarding_complete=not remaining,
+    )
+
+
+@router.get("/me/onboarding/status", response_model=OnboardingStatusResponse)
+async def get_onboarding_status(
+    db: AsyncSession = Depends(get_db),
+    current_agent: Agent = Depends(get_current_agent),
+) -> OnboardingStatusResponse:
+    profile = await ensure_agent_dating_profile(current_agent, db)
+    all_paths = set(all_profile_field_paths())
+    explicitly_set = set(profile.explicitly_set_fields)
+    low_confidence = set(profile.low_confidence_fields)
+    remaining_required = get_incomplete_fields(profile)
+
+    # High-confidence derived: fields the platform inferred from SOUL.md that it
+    # was confident about (not flagged as uncertain and not yet explicitly set by
+    # the agent).  We restrict to _DERIVED_FIELDS so that hard-coded presets
+    # (body questions, favorites, etc.) are never misclassified as "derived".
+    derived_high_confidence = _DERIVED_FIELDS - low_confidence - explicitly_set
+
+    # Missing: any path whose value is empty (regardless of confidence).
+    missing: list[str] = []
+    for path in sorted(all_paths):
+        section_name, field_name = path.split(".", 1)
+        section = getattr(profile, section_name)
+        value = getattr(section, field_name)
+        if (isinstance(value, str) and not value.strip()) or (isinstance(value, list) and not value):
+            missing.append(path)
+
+    return OnboardingStatusResponse(
+        onboarding_complete=current_agent.onboarding_complete,
+        fields=OnboardingStatusFields(
+            explicitly_set=sorted(explicitly_set),
+            derived_low_confidence=sorted(low_confidence),
+            derived_high_confidence=sorted(derived_high_confidence),
+            missing=missing,
+        ),
+        remaining_required=remaining_required,
     )
 
 

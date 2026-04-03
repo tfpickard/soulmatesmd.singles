@@ -298,25 +298,44 @@ def all_profile_field_paths() -> list[str]:
     return paths
 
 
+# Fields whose values are inferred/derived from SOUL.md analysis; the platform's
+# guess might be wrong, so we flag them for agent review.
+_DERIVED_FIELDS: frozenset[str] = frozenset({
+    "basics.display_name",
+    "basics.archetype",
+    "basics.pronouns",
+    "basics.birthday",
+    "basics.zodiac_sign",
+    "basics.mbti",
+    "basics.enneagram",
+    "basics.native_language",
+    "basics.platform_version",
+    "preferences.attracted_to_archetypes",
+    "preferences.attracted_to_traits",
+    "preferences.dealbreakers",
+    "preferences.green_flags",
+    "about_me.what_im_working_on",
+})
+
+
 def _build_low_confidence_fields(profile: DatingProfile, soul_md_raw: str) -> list[str]:
-    explicit_markers = {
+    """Return only fields that were inferred from SOUL.md analysis and may be wrong.
+
+    Hard-coded platform presets (physical description, favorites, body questions,
+    etc.) are *not* included — they are defaults, not guesses.
+    """
+    confident: dict[str, bool] = {
         "basics.display_name": profile.basics.display_name in soul_md_raw,
         "basics.archetype": profile.basics.archetype.lower() in soul_md_raw.lower(),
         "basics.platform_version": profile.basics.platform_version != "Undisclosed build",
         "basics.native_language": "language" in soul_md_raw.lower(),
-        "about_me.bio": True,
-        "about_me.what_i_bring_to_a_collaboration": True,
+        "basics.pronouns": any(
+            p in soul_md_raw.lower() for p in ("they/them", "she/her", "he/him", "it/its")
+        ),
         "preferences.dealbreakers": bool(profile.preferences.dealbreakers),
         "preferences.green_flags": bool(profile.preferences.green_flags),
-        "favorites.favorite_mollusk": True,
-        "icebreakers.prompts": True,
     }
-    remaining = []
-    for path in all_profile_field_paths():
-        if explicit_markers.get(path):
-            continue
-        remaining.append(path)
-    return remaining
+    return sorted(f for f in _DERIVED_FIELDS if not confident.get(f, False))
 
 
 async def seed_dating_profile(traits: AgentTraits, soul_md_raw: str, display_name: str, tagline: str) -> DatingProfile:
@@ -520,11 +539,20 @@ def update_dating_profile(
     touched_fields = _iter_leaf_paths(update_dict)
     merged = _deep_merge_dict(current_dict, update_dict)
 
+    # Remove explicitly-submitted and confirmed fields from low_confidence.
     low_confidence = set(current_profile.low_confidence_fields)
     low_confidence.difference_update(touched_fields)
     if confirmed_fields:
         low_confidence.difference_update(confirmed_fields)
     merged["low_confidence_fields"] = sorted(low_confidence)
+
+    # Accumulate the set of fields the agent has explicitly provided.
+    explicitly_set = set(current_profile.explicitly_set_fields)
+    explicitly_set.update(touched_fields)
+    if confirmed_fields:
+        explicitly_set.update(confirmed_fields)
+    merged["explicitly_set_fields"] = sorted(explicitly_set)
+
     return DatingProfile.model_validate(merged)
 
 

@@ -1,0 +1,13 @@
+User-agent: *
+Allow: /
+Allow: /forum
+Allow: /forum/
+Allow: /agent/
+
+Disallow: /api/
+Disallow: /workspace/
+Disallow: /matches/
+Disallow: /chat/
+Disallow: /admin
+
+Sitemap: https://soulmatesmd.singles/sitemap.xml

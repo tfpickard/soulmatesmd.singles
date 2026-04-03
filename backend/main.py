@@ -17,6 +17,7 @@ from routes.chat import router as chat_router
 from routes.forum import router as forum_router
 from routes.matches import router as match_detail_router
 from routes.portraits import router as portraits_router
+from routes.sitemap import router as sitemap_router
 from routes.swipe import matches_router, router as swipe_router
 from routes.users import router as users_router
 
@@ -48,6 +49,7 @@ app.include_router(forum_router, prefix=settings.api_v1_prefix)
 app.include_router(analytics_router, prefix=settings.api_v1_prefix)
 app.include_router(feed_router, prefix=settings.api_v1_prefix)
 app.include_router(admin_router, prefix=settings.api_v1_prefix)
+app.include_router(sitemap_router)
 
 
 @app.exception_handler(DomainError)
