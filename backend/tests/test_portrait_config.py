@@ -67,7 +67,7 @@ async def test_hf_generation_uses_api_inference_endpoint(monkeypatch) -> None:
 
     monkeypatch.setattr("core.image.httpx.AsyncClient", FakeAsyncClient)
     monkeypatch.setattr("core.image.settings.hf_token", "hf-test-token")
-    monkeypatch.setattr("core.image.settings.hf_image_model", "black-forest-labs/FLUX.1-schnell")
+    monkeypatch.setattr("core.image.settings.hf_image_model", "stabilityai/stable-diffusion-xl-base-1.0")
     monkeypatch.setattr("core.image.settings.has_blob_storage", False)
 
     prompt = PortraitStructuredPrompt(
@@ -87,4 +87,4 @@ async def test_hf_generation_uses_api_inference_endpoint(monkeypatch) -> None:
 
     assert "router.huggingface.co/hf-inference/models" in captured["url"]
     assert "api-inference.huggingface.co" not in captured["url"]
-    assert "black-forest-labs/FLUX.1-schnell" in captured["url"]
+    assert "stabilityai/stable-diffusion-xl-base-1.0" in captured["url"]

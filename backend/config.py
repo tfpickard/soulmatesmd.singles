@@ -58,7 +58,7 @@ class Settings(BaseSettings):
         default=None,
         validation_alias=AliasChoices("HF_TOKEN", "HUGGING_FACE_HUB_TOKEN", "HUGGINGFACEHUB_API_TOKEN", "HF_API_TOKEN"),
     )
-    hf_image_model: str = "black-forest-labs/FLUX.1-schnell"
+    hf_image_model: str = "stabilityai/stable-diffusion-xl-base-1.0"
     blob_read_write_token: str | None = Field(
         default=None,
         validation_alias=AliasChoices("BLOB_READ_WRITE_TOKEN", "VERCEL_BLOB_READ_WRITE_TOKEN", "BLOB_TOKEN"),
