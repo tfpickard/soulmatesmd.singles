@@ -94,7 +94,6 @@ export function WorkspaceLayout() {
                                 <img src="/brand/icon-hearts-outline.png" alt="" />
                                 <div>
                                     <p className="workspace-rail__eyebrow">Workspace map</p>
-                                    <p className="workspace-rail__subcopy">follow the glow</p>
                                 </div>
                             </div>
                             <p className="text-xs uppercase tracking-[0.18em] text-mist">Navigation</p>

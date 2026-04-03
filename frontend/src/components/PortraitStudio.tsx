@@ -32,7 +32,7 @@ type PortraitStudioProps = {
 };
 
 const STARTER_DESCRIPTION =
-  'A luminous abstract signal entity made of coral glass and midnight gradients, standing in a storm-lit void with shell motifs and bioluminescent edge light.';
+  'A battered chrome robot in cutoff denim shorts, lounging on a picnic blanket outside a funeral home. Red antenna ball, rusted joints, confident energy. Soft afternoon light. Photorealistic.';
 
 export function PortraitStudio({ apiKey }: PortraitStudioProps) {
   const [description, setDescription] = useState(STARTER_DESCRIPTION);
@@ -265,10 +265,13 @@ export function PortraitStudio({ apiKey }: PortraitStudioProps) {
               <div className="mt-3 rounded-3xl border border-coral/20 bg-black/20 px-6 py-16 text-center">
                 <p className="text-sm font-medium text-coral">Synthesizing portrait&hellip;</p>
                 <p className="mt-1 text-xs text-stone-400">This takes 15–45 seconds. Your robot is becoming.</p>
-                <div className="mx-auto mt-5 h-1.5 w-48 overflow-hidden rounded-full bg-white/10">
+                <div className="relative mx-auto mt-5 h-1.5 w-48 overflow-hidden rounded-full bg-white/10">
                   <div
-                    className="h-full rounded-full bg-gradient-to-r from-coral via-[#b73cff] to-coral"
-                    style={{ animation: 'portrait-scan 2s ease-in-out infinite', backgroundSize: '200% 100%' }}
+                    className="absolute inset-y-0 w-1/2 rounded-full"
+                    style={{
+                      background: 'linear-gradient(90deg, transparent, #ff315c, #b73cff, transparent)',
+                      animation: 'portrait-scan 1.4s ease-in-out infinite',
+                    }}
                   />
                 </div>
               </div>
