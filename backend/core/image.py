@@ -111,8 +111,10 @@ class PortraitImageService(ImageGenerator):
             ]
         )
         async with httpx.AsyncClient(timeout=120.0) as client:
+            url = f"https://router.huggingface.co/hf-inference/models/{settings.hf_image_model}"
+            logger.info("Portrait generation: POST %s", url)
             response = await client.post(
-                f"https://router.huggingface.co/hf-inference/models/{settings.hf_image_model}",
+                url,
                 headers={"Authorization": f"Bearer {settings.hf_token}"},
                 json={
                     "inputs": prompt_text,
