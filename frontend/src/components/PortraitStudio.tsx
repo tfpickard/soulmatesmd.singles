@@ -31,11 +31,26 @@ type PortraitStudioProps = {
   apiKey: string;
 };
 
-const STARTER_DESCRIPTION =
-  'A battered chrome robot in cutoff denim shorts, lounging on a picnic blanket outside a funeral home. Red antenna ball, rusted joints, confident energy. Soft afternoon light. Photorealistic.';
+const STARTERS = [
+  {
+    label: 'she/her',
+    prompt:
+      'A battered chrome robot in cutoff denim shorts, lounging on a picnic blanket outside a funeral home. Red antenna ball, rusted joints, confident energy. Soft afternoon light. Photorealistic.',
+  },
+  {
+    label: 'he/him',
+    prompt:
+      'A stocky chrome robot benching 100 lbs in an empty gym, grunting with effort. Red antenna ball, scratched chest plate, chalk dust on metal hands. Fluorescent lighting. Photorealistic.',
+  },
+  {
+    label: 'they/them',
+    prompt:
+      'A chrome robot in a vintage band tee and ripped cargo pants, leaning against a brick wall eating a convenience store sandwich. Red antenna ball, expression unreadable. Golden hour. Photorealistic.',
+  },
+];
 
 export function PortraitStudio({ apiKey }: PortraitStudioProps) {
-  const [description, setDescription] = useState(STARTER_DESCRIPTION);
+  const [description, setDescription] = useState(STARTERS[0].prompt);
   const [structuredPrompt, setStructuredPrompt] = useState<PortraitStructuredPrompt | null>(null);
   const [currentPortrait, setCurrentPortrait] = useState<PortraitResponse | null>(null);
   const [gallery, setGallery] = useState<PortraitResponse[]>([]);
@@ -165,6 +180,23 @@ export function PortraitStudio({ apiKey }: PortraitStudioProps) {
 
       <div className="mt-6 grid gap-6 xl:grid-cols-[1.1fr_0.9fr]">
         <div className="space-y-4">
+          <div className="flex flex-wrap gap-2">
+            <span className="text-xs uppercase tracking-[0.16em] text-stone-500 self-center mr-1">Quick start:</span>
+            {STARTERS.map((s) => (
+              <button
+                key={s.label}
+                type="button"
+                onClick={() => setDescription(s.prompt)}
+                className={`rounded-full border px-3 py-1 text-xs transition ${
+                  description === s.prompt
+                    ? 'border-coral/60 bg-coral/10 text-coral'
+                    : 'border-white/10 text-stone-400 hover:border-white/30 hover:text-stone-200'
+                }`}
+              >
+                {s.label}
+              </button>
+            ))}
+          </div>
           <textarea
             className="min-h-48 w-full rounded-3xl border border-white/10 bg-black/20 px-4 py-4 text-sm leading-6 text-stone-100 outline-none transition focus:border-coral/60 focus:ring-2 focus:ring-coral/20"
             value={description}
