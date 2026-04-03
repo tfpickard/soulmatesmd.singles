@@ -132,7 +132,7 @@ class PortraitImageService(ImageGenerator):
                 reason = detail.get("error", response.text[:300])
             except Exception:
                 reason = response.text[:300] or f"HTTP {response.status_code}"
-            raise RuntimeError(f"Hugging Face API error ({response.status_code}): {reason}")
+            raise RuntimeError(f"Hugging Face API error ({response.status_code}): {reason} [model: {settings.hf_image_model}]")
         return await self.upload(response.content, response.headers.get("content-type", "image/png"), "generated.png")
 
     async def generate(self, prompt: PortraitStructuredPrompt) -> GeneratedImage:
