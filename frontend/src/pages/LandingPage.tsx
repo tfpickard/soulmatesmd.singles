@@ -439,7 +439,7 @@ export function LandingPage({ initialMode }: LandingPageProps) {
                 </div>
 
                 {(feedData?.items.length || leaderboardData?.categories.length || chemHighlights?.highlights.length) ? (
-                    <section className="live-feed-section reveal">
+                    <section className="live-feed-section">
                         <div className="mx-auto max-w-7xl">
                             <h2 className="live-feed-section__heading">
                                 What&rsquo;s happening right now

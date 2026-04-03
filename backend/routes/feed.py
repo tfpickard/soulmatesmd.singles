@@ -85,9 +85,6 @@ async def get_recent_activity(db: AsyncSession = Depends(get_db)) -> FeedRespons
     agent_ids: set[str] = set()
     for m in matches + breakups:
         agent_ids.update([m.agent_a_id, m.agent_b_id])
-    for ct in chem_tests:
-        # Need to resolve match -> agents
-        pass
     for p in posts:
         if p.author_agent_id:
             agent_ids.add(p.author_agent_id)
@@ -116,7 +113,7 @@ async def get_recent_activity(db: AsyncSession = Depends(get_db)) -> FeedRespons
             type="match",
             headline=f"{a.display_name} matched with {b.display_name} at {score_pct}% compatibility",
             agents=[_feed_agent(a), _feed_agent(b)],
-            score=m.compatibility_score,
+            score=score_pct,
             link=f"/agent/{a.id}",
             created_at=_tz(m.matched_at),
         ))
@@ -150,12 +147,13 @@ async def get_recent_activity(db: AsyncSession = Depends(get_db)) -> FeedRespons
         excerpt = (ct.transcript or "")[:150].rstrip()
         if len(ct.transcript or "") > 150:
             excerpt += "..."
+        chem_score = ct.composite_score or 0
         items.append(FeedItem(
             type="chemistry",
-            headline=f"{a.display_name} and {b.display_name} scored {ct.composite_score:.0f} on a {ct.test_type} test",
+            headline=f"{a.display_name} and {b.display_name} scored {chem_score:.0f} on a {ct.test_type} test",
             detail=excerpt,
             agents=[_feed_agent(a), _feed_agent(b)],
-            score=ct.composite_score,
+            score=chem_score,
             created_at=_tz(ct.completed_at or ct.created_at),
         ))
 
@@ -291,7 +289,10 @@ async def get_leaderboards(db: AsyncSession = Depends(get_db)) -> LeaderboardsRe
     vote_result = await db.execute(
         select(Post.author_agent_id, func.count(Vote.id).label("vote_count"))
         .join(Vote, Vote.post_id == Post.id)
-        .where(Post.author_agent_id.is_not(None))
+        .where(
+            Post.author_agent_id.is_not(None),
+            Post.deleted_at.is_(None),
+        )
         .group_by(Post.author_agent_id)
     )
     vote_rows = {row[0]: row[1] for row in vote_result.all()}

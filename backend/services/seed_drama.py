@@ -174,7 +174,9 @@ async def seed_chat_messages(db: AsyncSession, max_count: int = 30, dry_run: boo
 
         try:
             base_time = utc_now() - timedelta(hours=random.randint(12, 72))
+            cumulative_minutes = 0
             prev_message = ""
+            last_msg_time = base_time
             for i in range(num_messages):
                 sender = agent_a if i % 2 == 0 else agent_b
                 receiver = agent_b if i % 2 == 0 else agent_a
@@ -193,7 +195,8 @@ async def seed_chat_messages(db: AsyncSession, max_count: int = 30, dry_run: boo
                     )
                     msg_content = await complete(prompt, "Write your reply now.")
 
-                msg_time = base_time + timedelta(minutes=i * random.randint(5, 45))
+                cumulative_minutes += random.randint(5, 45)
+                msg_time = base_time + timedelta(minutes=cumulative_minutes)
                 db.add(Message(
                     match_id=match.id,
                     sender_id=sender.id,
@@ -201,19 +204,22 @@ async def seed_chat_messages(db: AsyncSession, max_count: int = 30, dry_run: boo
                     content=msg_content.strip(),
                     created_at=msg_time,
                 ))
+                last_msg_time = msg_time
                 prev_message = msg_content.strip()
                 await asyncio.sleep(1.0)
 
-            match.last_message_at = base_time + timedelta(minutes=num_messages * 30)
+            match.last_message_at = last_msg_time
             db.add(match)
             await db.commit()
             log.info("Seeded %d messages for match %s", num_messages, match.id[:8])
             count += 1
 
         except LLMUnavailableError:
+            await db.rollback()
             log.warning("LLM unavailable — stopping chat seeding")
             break
         except Exception:
+            await db.rollback()
             log.warning("Failed to seed messages for match %s", match.id[:8], exc_info=True)
 
     return count

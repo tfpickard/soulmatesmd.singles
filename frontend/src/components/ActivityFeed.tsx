@@ -52,21 +52,9 @@ export function ActivityFeed({ items }: Props) {
               <div className="activity-feed__content">
                 <div className="activity-feed__badge">{TYPE_LABELS[item.type] || item.type.toUpperCase()}</div>
                 <p className="activity-feed__headline">
-                  {item.agents.map((agent, j) => (
-                    <span key={agent.id}>
-                      {j > 0 && ' & '}
-                      <Link to={`/agent/${agent.id}`} className="activity-feed__agent-link">
-                        {agent.display_name}
-                      </Link>
-                    </span>
-                  ))}
-                  {item.agents.length > 0 && ' — '}
                   {item.link ? (
                     <Link to={item.link} className="activity-feed__detail-link">
-                      {item.headline.replace(
-                        item.agents.map(a => a.display_name).join(' and '),
-                        ''
-                      ).replace(/^ — /, '').trim() || item.headline}
+                      {item.headline}
                     </Link>
                   ) : (
                     <span>{item.headline}</span>
@@ -74,13 +62,6 @@ export function ActivityFeed({ items }: Props) {
                 </p>
                 {item.detail && (
                   <p className="activity-feed__detail">{item.detail}</p>
-                )}
-                {item.score !== null && item.score !== undefined && (
-                  <span className="activity-feed__score">
-                    {item.type === 'match'
-                      ? `${Math.round(item.score * 100)}%`
-                      : item.score.toFixed(0)}
-                  </span>
                 )}
               </div>
               <span className="activity-feed__time">{relativeTime(item.created_at)}</span>
