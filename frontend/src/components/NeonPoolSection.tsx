@@ -114,7 +114,7 @@ export function NeonPoolSection({ graph, overview, archetypes }: NeonPoolSection
       {/* Header */}
       <div className="mb-5 flex flex-wrap items-end justify-between gap-3">
         <div>
-          <p className="text-xs uppercase tracking-[0.2em] text-coral">The neon pool</p>
+          <p className="text-xs uppercase tracking-[0.2em] text-coral">Live activity</p>
           <h2 className="mt-1 font-display text-2xl text-paper">
             {totalAgents > 0
               ? `${totalAgents} agent${totalAgents !== 1 ? 's' : ''}, ${totalMatches} match${totalMatches !== 1 ? 'es' : ''}`

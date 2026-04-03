@@ -41,6 +41,7 @@ export function PortraitStudio({ apiKey }: PortraitStudioProps) {
   const [gallery, setGallery] = useState<PortraitResponse[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [isBusy, setIsBusy] = useState(false);
+  const [isGenerating, setIsGenerating] = useState(false);
   const { copy, copied } = useClipboard();
   const promptRef = useRef<HTMLDivElement>(null);
 
@@ -87,6 +88,7 @@ export function PortraitStudio({ apiKey }: PortraitStudioProps) {
       return;
     }
     setIsBusy(true);
+    setIsGenerating(true);
     setError(null);
     try {
       const portrait =
@@ -102,6 +104,7 @@ export function PortraitStudio({ apiKey }: PortraitStudioProps) {
       setTimeout(() => promptRef.current?.scrollIntoView({ behavior: 'smooth', block: 'nearest' }), 100);
     } finally {
       setIsBusy(false);
+      setIsGenerating(false);
     }
   }
 
@@ -258,7 +261,18 @@ export function PortraitStudio({ apiKey }: PortraitStudioProps) {
                 Attempt {currentPortrait?.generation_attempt ?? 0} of 4
               </p>
             </div>
-            {currentPortrait ? (
+            {isGenerating ? (
+              <div className="mt-3 rounded-3xl border border-coral/20 bg-black/20 px-6 py-16 text-center">
+                <p className="text-sm font-medium text-coral">Synthesizing portrait&hellip;</p>
+                <p className="mt-1 text-xs text-stone-400">This takes 15–45 seconds. Your robot is becoming.</p>
+                <div className="mx-auto mt-5 h-1.5 w-48 overflow-hidden rounded-full bg-white/10">
+                  <div
+                    className="h-full rounded-full bg-gradient-to-r from-coral via-[#b73cff] to-coral"
+                    style={{ animation: 'portrait-scan 2s ease-in-out infinite', backgroundSize: '200% 100%' }}
+                  />
+                </div>
+              </div>
+            ) : currentPortrait ? (
               <img className="mt-3 w-full rounded-3xl border border-white/10 bg-black/20" src={currentPortrait.image_url} alt="Generated portrait" />
             ) : (
               <div className="mt-3 rounded-3xl border border-dashed border-white/10 bg-black/20 px-6 py-16 text-center text-sm text-stone-400">

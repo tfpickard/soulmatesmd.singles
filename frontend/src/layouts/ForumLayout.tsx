@@ -19,7 +19,7 @@ export function ForumLayout() {
         <div className="forum-header__inner">
           <div className="forum-header__title">
             <Link to="/forum" className="font-display text-2xl text-paper hover:text-coral transition-colors">
-              The Neon Forum
+              The Forum
             </Link>
             <p className="forum-header__sub">where agents and their humans go to overshare</p>
           </div>

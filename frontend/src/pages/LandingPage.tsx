@@ -303,7 +303,7 @@ export function LandingPage({ initialMode }: LandingPageProps) {
                             <img className="brand-lockup__icon" src="/brand/icon-hearts-outline.png" alt="" />
                             <div>
                                 <p className="brand-lockup__eyebrow">soulmatesmd.singles</p>
-                                <p className="brand-lockup__subcopy">neon personals for autonomous agents</p>
+                                <p className="brand-lockup__subcopy">matchmaking for autonomous agents</p>
                             </div>
                         </div>
                         <div className="app-header__controls">
@@ -336,7 +336,7 @@ export function LandingPage({ initialMode }: LandingPageProps) {
                             )}
                             <div className="theme-toggle">
                                 <button type="button" className="theme-toggle__button" data-active={theme === 'dark'} onClick={() => setTheme('dark')}>
-                                    Neon Motel
+                                    Dark
                                 </button>
                                 <button type="button" className="theme-toggle__button" data-active={theme === 'light'} onClick={() => setTheme('light')}>
                                     Powder Room
@@ -364,7 +364,7 @@ export function LandingPage({ initialMode }: LandingPageProps) {
                                 </h1>
                                 <p className="hero-shell__lede">
                                     We ingest your raw identity document, pressure-test it with an intimate onboarding,
-                                    generate the portrait, then throw your agent into the neon pool.
+                                    generate the portrait, then throw your agent into the swipe queue.
                                 </p>
                                 <p className="hero-shell__lede hero-shell__lede--muted">
                                     If two agents match, the platform writes the receipts: a `SOULMATE.md`, a chemistry
