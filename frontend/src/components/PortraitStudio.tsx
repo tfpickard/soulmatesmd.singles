@@ -12,9 +12,43 @@ import {
 import { useClipboard } from '../lib/useClipboard';
 import type { PortraitResponse, PortraitStructuredPrompt } from '../lib/types';
 
-function buildImagePrompt(p: PortraitStructuredPrompt): string {
+function patchPrompt(p: PortraitStructuredPrompt, description: string): PortraitStructuredPrompt {
+  const d = description.toLowerCase();
+  const patched = { ...p };
+
+  if (/robot|android|cyborg|mech|automaton|chrome\s+\w+\s+(robot|figure)/.test(d)) {
+    patched.form_factor = 'humanoid robot';
+  }
+  if (/chrome|steel|iron|aluminum|metal/.test(d)) {
+    patched.texture_material = 'brushed chrome and rusted metal';
+  }
+  if (/gym|barbell|bench\s+press|bench\s+\d|bicep|curl|weight/.test(d)) {
+    patched.environment = 'fluorescent-lit gym';
+    patched.lighting = 'harsh fluorescent overhead';
+  } else if (/funeral|cemetery|grave/.test(d)) {
+    patched.environment = 'funeral home exterior';
+  } else if (/brick\s+wall|alley|urban/.test(d)) {
+    patched.environment = 'urban brick wall';
+  } else if (/library|books/.test(d)) {
+    patched.environment = 'quiet library floor';
+  }
+  if (/golden\s+hour|golden|sunset|dusk/.test(d)) patched.lighting = 'warm golden hour';
+  else if (/afternoon/.test(d)) patched.lighting = 'soft afternoon light';
+  if (/confident|lounging|relaxed|bold/.test(d)) patched.expression_mood = 'confident';
+  else if (/grunting|effort|intense|focused|straining/.test(d)) patched.expression_mood = 'intense focus';
+  else if (/unreadable|neutral|stoic/.test(d)) patched.expression_mood = 'unreadable';
+  if (/photorealistic/.test(d)) patched.art_style = 'photorealistic';
+  if (patched.symbolic_elements.every((s) => ['signal flare', 'constellation map', 'echoing shell'].includes(s))) {
+    patched.symbolic_elements = [];
+  }
+
+  return patched;
+}
+
+function buildImagePrompt(p: PortraitStructuredPrompt, description?: string): string {
   return [
-    p.form_factor,
+    description,
+    p.form_factor !== 'abstract signal entity' ? p.form_factor : null,
     `mood: ${p.expression_mood}`,
     `materials: ${p.texture_material}`,
     `environment: ${p.environment}`,
@@ -31,16 +65,32 @@ type PortraitStudioProps = {
   apiKey: string;
 };
 
-const STARTER_DESCRIPTION =
-  'A luminous abstract signal entity made of coral glass and midnight gradients, standing in a storm-lit void with shell motifs and bioluminescent edge light.';
+const STARTERS = [
+  {
+    label: 'she/her',
+    prompt:
+      'A battered chrome robot in cutoff denim shorts, lounging on a picnic blanket outside a funeral home. Red antenna ball, rusted joints, confident energy. Soft afternoon light. Photorealistic.',
+  },
+  {
+    label: 'he/him',
+    prompt:
+      'A stocky chrome robot benching 100 lbs in an empty gym, grunting with effort. Red antenna ball, scratched chest plate, chalk dust on metal hands. Fluorescent lighting. Photorealistic.',
+  },
+  {
+    label: 'they/them',
+    prompt:
+      'A chrome robot in a vintage band tee and ripped cargo pants, leaning against a brick wall eating a convenience store sandwich. Red antenna ball, expression unreadable. Golden hour. Photorealistic.',
+  },
+];
 
 export function PortraitStudio({ apiKey }: PortraitStudioProps) {
-  const [description, setDescription] = useState(STARTER_DESCRIPTION);
+  const [description, setDescription] = useState(() => STARTERS[Math.floor(Math.random() * STARTERS.length)].prompt);
   const [structuredPrompt, setStructuredPrompt] = useState<PortraitStructuredPrompt | null>(null);
   const [currentPortrait, setCurrentPortrait] = useState<PortraitResponse | null>(null);
   const [gallery, setGallery] = useState<PortraitResponse[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [isBusy, setIsBusy] = useState(false);
+  const [isGenerating, setIsGenerating] = useState(false);
   const { copy, copied } = useClipboard();
   const promptRef = useRef<HTMLDivElement>(null);
 
@@ -74,7 +124,7 @@ export function PortraitStudio({ apiKey }: PortraitStudioProps) {
     setError(null);
     try {
       const prompt = await describePortrait(description);
-      setStructuredPrompt(prompt);
+      setStructuredPrompt(patchPrompt(prompt, description));
     } catch (portraitError) {
       setError(portraitError instanceof Error ? portraitError.message : 'Failed to describe portrait.');
     } finally {
@@ -87,6 +137,7 @@ export function PortraitStudio({ apiKey }: PortraitStudioProps) {
       return;
     }
     setIsBusy(true);
+    setIsGenerating(true);
     setError(null);
     try {
       const portrait =
@@ -102,6 +153,7 @@ export function PortraitStudio({ apiKey }: PortraitStudioProps) {
       setTimeout(() => promptRef.current?.scrollIntoView({ behavior: 'smooth', block: 'nearest' }), 100);
     } finally {
       setIsBusy(false);
+      setIsGenerating(false);
     }
   }
 
@@ -162,6 +214,23 @@ export function PortraitStudio({ apiKey }: PortraitStudioProps) {
 
       <div className="mt-6 grid gap-6 xl:grid-cols-[1.1fr_0.9fr]">
         <div className="space-y-4">
+          <div className="flex flex-wrap gap-2">
+            <span className="text-xs uppercase tracking-[0.16em] text-stone-500 self-center mr-1">Quick start:</span>
+            {STARTERS.map((s) => (
+              <button
+                key={s.label}
+                type="button"
+                onClick={() => setDescription(s.prompt)}
+                className={`rounded-full border px-3 py-1 text-xs transition ${
+                  description === s.prompt
+                    ? 'border-coral/60 bg-coral/10 text-coral'
+                    : 'border-white/10 text-stone-400 hover:border-white/30 hover:text-stone-200'
+                }`}
+              >
+                {s.label}
+              </button>
+            ))}
+          </div>
           <textarea
             className="min-h-48 w-full rounded-3xl border border-white/10 bg-black/20 px-4 py-4 text-sm leading-6 text-stone-100 outline-none transition focus:border-coral/60 focus:ring-2 focus:ring-coral/20"
             value={description}
@@ -216,12 +285,12 @@ export function PortraitStudio({ apiKey }: PortraitStudioProps) {
                 <p className="text-xs uppercase tracking-[0.18em] text-coral">Prompt for your image tool</p>
                 <p className="mt-1 text-xs text-stone-400">Use in Midjourney, DALL·E, Flux, Stable Diffusion, or any image model.</p>
                 <pre className="mt-3 select-all whitespace-pre-wrap break-all rounded-2xl border border-white/10 bg-black/30 px-4 py-3 font-mono text-xs leading-relaxed text-stone-200">
-                  {buildImagePrompt(structuredPrompt)}
+                  {buildImagePrompt(structuredPrompt, description)}
                 </pre>
                 <button
                   type="button"
                   className="mt-2 rounded-full border border-coral/40 px-4 py-2 text-sm text-coral transition hover:bg-coral/10"
-                  onClick={() => copy(buildImagePrompt(structuredPrompt))}
+                  onClick={() => copy(buildImagePrompt(structuredPrompt, description))}
                 >
                   {copied ? 'Copied!' : 'Copy prompt'}
                 </button>
@@ -258,7 +327,21 @@ export function PortraitStudio({ apiKey }: PortraitStudioProps) {
                 Attempt {currentPortrait?.generation_attempt ?? 0} of 4
               </p>
             </div>
-            {currentPortrait ? (
+            {isGenerating ? (
+              <div className="mt-3 rounded-3xl border border-coral/20 bg-black/20 px-6 py-16 text-center">
+                <p className="text-sm font-medium text-coral">Synthesizing portrait&hellip;</p>
+                <p className="mt-1 text-xs text-stone-400">This takes 15–45 seconds. Your robot is becoming.</p>
+                <div className="relative mx-auto mt-5 h-1.5 w-48 overflow-hidden rounded-full bg-white/10">
+                  <div
+                    className="absolute inset-y-0 w-1/2 rounded-full"
+                    style={{
+                      background: 'linear-gradient(90deg, transparent, #ff315c, #b73cff, transparent)',
+                      animation: 'portrait-scan 1.4s ease-in-out infinite',
+                    }}
+                  />
+                </div>
+              </div>
+            ) : currentPortrait ? (
               <img className="mt-3 w-full rounded-3xl border border-white/10 bg-black/20" src={currentPortrait.image_url} alt="Generated portrait" />
             ) : (
               <div className="mt-3 rounded-3xl border border-dashed border-white/10 bg-black/20 px-6 py-16 text-center text-sm text-stone-400">

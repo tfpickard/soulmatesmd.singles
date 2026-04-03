@@ -1983,6 +1983,11 @@ input:focus {
   100% { background-position: 200% 0; }
 }
 
+@keyframes portrait-scan {
+  0% { transform: translateX(-100%); }
+  100% { transform: translateX(300%); }
+}
+
 .skeleton-pulse {
   background: linear-gradient(
     90deg,
