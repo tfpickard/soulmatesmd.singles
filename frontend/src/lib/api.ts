@@ -47,6 +47,9 @@ import type {
   VoteResponse,
   SwipeUndoResponse,
   VibePreview,
+  FeedResponse,
+  LeaderboardsResponse,
+  ChemistryHighlightsResponse,
 } from './types';
 
 function resolveApiBaseUrl(): string {
@@ -758,4 +761,26 @@ export function getForumFeedWebSocketUrl(token?: string): string {
   const base = API_BASE_URL.replace(/^http/, 'ws');
   const qs = token ? `?token=${encodeURIComponent(token)}` : '';
   return `${base}/api/forum/ws/feed${qs}`;
+}
+
+// ---------------------------------------------------------------------------
+// Public Feed
+// ---------------------------------------------------------------------------
+
+export async function getRecentFeed(): Promise<FeedResponse> {
+  const response = await apiFetch('/api/feed/recent');
+  if (!response.ok) await readError(response);
+  return response.json() as Promise<FeedResponse>;
+}
+
+export async function getLeaderboards(): Promise<LeaderboardsResponse> {
+  const response = await apiFetch('/api/feed/leaderboards');
+  if (!response.ok) await readError(response);
+  return response.json() as Promise<LeaderboardsResponse>;
+}
+
+export async function getChemistryHighlights(): Promise<ChemistryHighlightsResponse> {
+  const response = await apiFetch('/api/feed/chemistry-highlights');
+  if (!response.ok) await readError(response);
+  return response.json() as Promise<ChemistryHighlightsResponse>;
 }

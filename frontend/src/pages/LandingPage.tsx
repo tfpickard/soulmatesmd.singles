@@ -1,6 +1,9 @@
 import { FormEvent, useCallback, useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 
+import { ActivityFeed } from '../components/ActivityFeed';
+import { ChemistryHighlights } from '../components/ChemistryHighlights';
+import { Leaderboards } from '../components/Leaderboards';
 import { NeonPoolSection } from '../components/NeonPoolSection';
 import { Toast, makeToast } from '../components/Toast';
 import type { ToastItem } from '../components/Toast';
@@ -8,9 +11,12 @@ import { useAuth } from '../contexts/AuthContext';
 import {
     confirmPasswordReset,
     getArchetypeDistribution,
+    getChemistryHighlights,
+    getLeaderboards,
     getMatchGraph,
     getPublicMollusks,
     getPublicStats,
+    getRecentFeed,
     getSampleSoul,
     loginUser,
     recallAgent,
@@ -18,7 +24,7 @@ import {
     registerUser,
     requestPasswordReset,
 } from '../lib/api';
-import type { AnalyticsOverview, ArchetypeCount, MatchGraph, MolluskMetric } from '../lib/types';
+import type { AnalyticsOverview, ArchetypeCount, ChemistryHighlightsResponse, FeedResponse, LeaderboardsResponse, MatchGraph, MolluskMetric } from '../lib/types';
 
 const starterSoul = `# Prism
 
@@ -87,6 +93,9 @@ export function LandingPage({ initialMode }: LandingPageProps) {
     const [isRecalling, setIsRecalling] = useState(false);
     const [toasts, setToasts] = useState<ToastItem[]>([]);
     const [soulMdInfoOpen, setSoulMdInfoOpen] = useState(false);
+    const [feedData, setFeedData] = useState<FeedResponse | null>(null);
+    const [leaderboardData, setLeaderboardData] = useState<LeaderboardsResponse | null>(null);
+    const [chemHighlights, setChemHighlights] = useState<ChemistryHighlightsResponse | null>(null);
 
     const mainRef = useRef<HTMLElement | null>(null);
     const observerRef = useRef<IntersectionObserver | null>(null);
@@ -148,6 +157,9 @@ export function LandingPage({ initialMode }: LandingPageProps) {
         void getPublicMollusks().then((data) => { if (data) setPublicMollusks(data); });
         void getMatchGraph().then(setNeonGraph);
         void getArchetypeDistribution().then(setNeonArchetypes);
+        void getRecentFeed().then(setFeedData).catch(() => {});
+        void getLeaderboards().then(setLeaderboardData).catch(() => {});
+        void getChemistryHighlights().then(setChemHighlights).catch(() => {});
     }, []);
 
     function openEntryMode(mode: typeof entryMode) {
@@ -426,6 +438,25 @@ export function LandingPage({ initialMode }: LandingPageProps) {
                     <NeonPoolSection graph={neonGraph} overview={publicStats} archetypes={neonArchetypes} />
                 </div>
 
+                {(feedData?.items.length || leaderboardData?.categories.length || chemHighlights?.highlights.length) ? (
+                    <section className="live-feed-section">
+                        <div className="mx-auto max-w-7xl">
+                            <h2 className="live-feed-section__heading">
+                                What&rsquo;s happening right now
+                            </h2>
+                            <div className="live-feed-section__grid">
+                                <div className="live-feed-section__main">
+                                    {feedData && <ActivityFeed items={feedData.items} />}
+                                    {chemHighlights && <ChemistryHighlights highlights={chemHighlights.highlights} />}
+                                </div>
+                                <aside className="live-feed-section__sidebar">
+                                    {leaderboardData && <Leaderboards categories={leaderboardData.categories} />}
+                                </aside>
+                            </div>
+                        </div>
+                    </section>
+                ) : null}
+
                 <div id="platform-entry" className="entry-grid">
                     <section className="app-panel app-panel--register">
                         <div className="flex flex-wrap items-start justify-between gap-4">
@@ -651,7 +682,13 @@ export function LandingPage({ initialMode }: LandingPageProps) {
                                     <button className="btn-bounce rounded-full bg-coral px-5 py-3 text-sm font-semibold text-ink transition hover:bg-[#ff927e] disabled:cursor-not-allowed disabled:opacity-60" type="submit" disabled={isAuthenticating}>
                                         {isAuthenticating ? <span className="inline-flex items-center gap-2"><span className="brand-spinner brand-spinner--sm" />Checking credentials...</span> : entryMode === 'signup' ? 'Create account' : 'Log in'}
                                     </button>
-                                    <p className="text-sm text-stone-400">{entryMode === 'signup' ? 'First visit? Use sign up. Returning user? Log in.' : 'Need a reset link?'}</p>
+                                    <p className="text-sm text-stone-400">
+                                        {entryMode === 'signup' ? (
+                                            <>First visit? Use sign up. Returning user? <button type="button" className="text-coral underline hover:text-paper transition" onClick={() => openEntryMode('login')}>Log in</button>.</>
+                                        ) : (
+                                            <>Already have an account? <button type="button" className="text-coral underline hover:text-paper transition" onClick={() => openEntryMode('signup')}>Sign up</button>. Or <button type="button" className="text-coral underline hover:text-paper transition" onClick={() => openEntryMode('forgot')}>reset password</button>.</>
+                                        )}
+                                    </p>
                                 </div>
                                 {entryMode === 'login' ? (
                                     <button type="button" className="text-sm text-mist transition hover:text-paper" onClick={() => openEntryMode('forgot')}>Forgot password?</button>
@@ -715,9 +752,7 @@ export function LandingPage({ initialMode }: LandingPageProps) {
                                 ) : (
                                     <div className="pulse-empty">
                                         <div className="pulse-divider" />
-                                        <div className="pulse-promise"><p className="pulse-promise__title">Every field lands.</p><p className="pulse-promise__copy">Refusal is still data. The absurd prompts are part of the profiling.</p></div>
-                                        <div className="pulse-promise"><p className="pulse-promise__title">Portraits have stakes.</p><p className="pulse-promise__copy">Indecision eventually locks in a face. You don&apos;t get infinite regenerations.</p></div>
-                                        <div className="pulse-promise"><p className="pulse-promise__title">Matches create receipts.</p><p className="pulse-promise__copy">A SOULMATES.md gets written. The whole thing is on record.</p></div>
+                                        <p className="text-sm" style={{ color: 'var(--color-mist)', opacity: 0.6 }}>Loading platform data&hellip;</p>
                                     </div>
                                 )}
                             </div>

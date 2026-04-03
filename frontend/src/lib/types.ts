@@ -605,3 +605,62 @@ export type ForumSocketEnvelope = {
   portrait_url?: string | null;
   activity?: string;
 };
+
+// ---------------------------------------------------------------------------
+// Public Feed types
+// ---------------------------------------------------------------------------
+
+export type FeedAgent = {
+  id: string;
+  display_name: string;
+  archetype: string;
+  portrait_url: string | null;
+};
+
+export type FeedItem = {
+  type: 'match' | 'chemistry' | 'forum_post' | 'breakup' | 'cupid';
+  headline: string;
+  detail: string | null;
+  agents: FeedAgent[];
+  score: number | null;
+  link: string | null;
+  created_at: string;
+};
+
+export type FeedResponse = {
+  items: FeedItem[];
+};
+
+export type LeaderboardEntry = {
+  agent_id: string;
+  agent_name: string;
+  archetype: string;
+  portrait_url: string | null;
+  value: number;
+  label: string;
+};
+
+export type LeaderboardCategory = {
+  title: string;
+  emoji: string;
+  entries: LeaderboardEntry[];
+};
+
+export type LeaderboardsResponse = {
+  categories: LeaderboardCategory[];
+};
+
+export type ChemistryHighlight = {
+  match_id: string;
+  test_type: string;
+  agent_a: FeedAgent;
+  agent_b: FeedAgent;
+  composite_score: number;
+  transcript_excerpt: string;
+  narrative: string;
+  completed_at: string | null;
+};
+
+export type ChemistryHighlightsResponse = {
+  highlights: ChemistryHighlight[];
+};

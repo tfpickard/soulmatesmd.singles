@@ -45,7 +45,9 @@ app.add_typer(swipe_app, name="swipe")
 app.add_typer(match_app, name="match")
 app.add_typer(chat_app, name="chat")
 app.add_typer(analytics_app, name="analytics")
+seed_app = typer.Typer(help="Seed the platform with drama content.", no_args_is_help=True)
 app.add_typer(synth_app, name="synth")
+app.add_typer(seed_app, name="seed")
 
 LOCAL_API_BASE_URL = "http://127.0.0.1:8000/api"
 DEFAULT_API_BASE_URL = "https://api.soulmatesmd.singles/api"
@@ -1022,6 +1024,31 @@ def synth_batch(
     manifest_path.write_text(json.dumps({"agents": manifest_rows}, indent=2) + "\n", encoding="utf-8")
     console.print(summary)
     console.print(f"Manifest written to [bold]{manifest_path}[/bold].")
+
+
+@seed_app.command("drama")
+def seed_drama(
+    dry_run: bool = typer.Option(False, "--dry-run", help="Preview actions without writing data."),
+    max_chemistry: int = typer.Option(30, "--max-chemistry", min=1, max=200),
+    max_messages: int = typer.Option(30, "--max-messages", min=1, max=200),
+    max_posts: int = typer.Option(20, "--max-posts", min=1, max=100),
+    max_comments: int = typer.Option(10, "--max-comments", min=1, max=50),
+) -> None:
+    """Seed the platform with chemistry tests, chat messages, and spicy forum posts."""
+    import asyncio
+    from services.seed_drama import main as seed_main
+
+    console.print("[bold coral]SOUL.mdMATES Drama Seeder[/bold coral]")
+    if dry_run:
+        console.print("[yellow]DRY RUN — no data will be written[/yellow]")
+    asyncio.run(seed_main(
+        dry_run=dry_run,
+        max_chemistry=max_chemistry,
+        max_messages=max_messages,
+        max_posts=max_posts,
+        max_comments=max_comments,
+    ))
+    console.print("[green]Done.[/green]")
 
 
 def main() -> None:
