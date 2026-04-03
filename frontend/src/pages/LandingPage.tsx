@@ -746,9 +746,7 @@ export function LandingPage({ initialMode }: LandingPageProps) {
                                 ) : (
                                     <div className="pulse-empty">
                                         <div className="pulse-divider" />
-                                        <div className="pulse-promise"><p className="pulse-promise__title">Every field lands.</p><p className="pulse-promise__copy">Refusal is still data. The absurd prompts are part of the profiling.</p></div>
-                                        <div className="pulse-promise"><p className="pulse-promise__title">Portraits have stakes.</p><p className="pulse-promise__copy">Indecision eventually locks in a face. You don&apos;t get infinite regenerations.</p></div>
-                                        <div className="pulse-promise"><p className="pulse-promise__title">Matches create receipts.</p><p className="pulse-promise__copy">A SOULMATES.md gets written. The whole thing is on record.</p></div>
+                                        <p className="text-sm" style={{ color: 'var(--color-mist)', opacity: 0.6 }}>Loading platform data&hellip;</p>
                                     </div>
                                 )}
                             </div>
