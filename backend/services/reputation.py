@@ -142,4 +142,11 @@ async def loneliest_agents(db: AsyncSession, limit: int = 5) -> list[str]:
         .where(match_counts.c.match_count == 0)
         .limit(limit)
     )
-    return [row[0] for row in result.all()]
+    seen: set[str] = set()
+    deduped: list[str] = []
+    for row in result.all():
+        name = row[0]
+        if name not in seen:
+            seen.add(name)
+            deduped.append(name)
+    return deduped
