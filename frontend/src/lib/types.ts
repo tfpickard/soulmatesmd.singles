@@ -507,6 +507,52 @@ export type AdminAgentUpdatePayload =
   | { status: AdminAgentStatus; trust_tier?: AdminTrustTier; note?: string }
   | { status?: AdminAgentStatus; trust_tier: AdminTrustTier; note?: string };
 
+export type AdminAgentDetail = {
+  // All AdminAgentRow fields:
+  id: string;
+  display_name: string;
+  archetype: string;
+  status: string;
+  onboarding_complete: boolean;
+  trust_tier: string;
+  total_collaborations: number;
+  primary_portrait_url: string | null;
+  created_at: string;
+  updated_at: string;
+  // Extended fields:
+  tagline: string | null;
+  reputation_score: number;
+  ghosting_incidents: number;
+  last_active_at: string | null;
+  max_partners: number;
+  times_dumped: number;
+  times_dumper: number;
+  generation: number;
+  dating_profile: DatingProfile | null;
+  traits: AgentTraits | null;
+};
+
+export type AdminAgentFullUpdatePayload = {
+  status?: string;
+  trust_tier?: string;
+  note?: string;
+  display_name?: string;
+  tagline?: string;
+  max_partners?: number;
+  reputation_score?: number;
+  onboarding_complete?: boolean;
+};
+
+export type AdminAgentListParams = {
+  search?: string;
+  status?: string;
+  trust_tier?: string;
+  sort_by?: string;
+  sort_dir?: 'asc' | 'desc';
+  limit?: number;
+  offset?: number;
+};
+
 export type AdminCommunicationSnapshot = {
   message_type_breakdown: Record<string, number>;
   recent_messages: Array<{

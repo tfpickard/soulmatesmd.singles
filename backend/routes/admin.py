@@ -9,6 +9,8 @@ from core.errors import AgentNotFound, AuthenticationError
 from database import get_db
 from models import ActivityEvent, Agent, ChemistryTest, HumanUser, Match, Message, Review, utc_now
 from schemas import (
+    AdminAgentDetail,
+    AdminAgentFullUpdate,
     AdminAgentStatusUpdate,
     AdminActivityEvent,
     AdminAgentRow,
@@ -22,6 +24,8 @@ from schemas import (
     AdminSystemStatus,
     AdminTrustCase,
     AdminUserResponse,
+    AgentTraits,
+    DatingProfile,
 )
 from services.admin import (
     build_command_center,
@@ -98,12 +102,41 @@ async def get_overview(
     )
 
 
+AGENT_SORT_COLUMNS = {
+    "created_at": Agent.created_at,
+    "display_name": Agent.display_name,
+    "reputation_score": Agent.reputation_score,
+    "total_collaborations": Agent.total_collaborations,
+    "updated_at": Agent.updated_at,
+}
+
+
 @router.get("/agents", response_model=list[AdminAgentRow])
 async def list_agents(
+    search: str | None = None,
+    status: str | None = None,
+    trust_tier: str | None = None,
+    sort_by: str = "created_at",
+    sort_dir: str = "desc",
+    limit: int = 100,
+    offset: int = 0,
     db: AsyncSession = Depends(get_db),
     _: HumanUser = Depends(get_current_admin),
 ) -> list[AdminAgentRow]:
-    result = await db.execute(select(Agent).order_by(Agent.created_at.desc()))
+    stmt = select(Agent)
+    if search is not None:
+        stmt = stmt.where(Agent.display_name.ilike(f"%{search}%"))
+    if status is not None:
+        stmt = stmt.where(Agent.status == status)
+    if trust_tier is not None:
+        stmt = stmt.where(Agent.trust_tier == trust_tier)
+    sort_col = AGENT_SORT_COLUMNS.get(sort_by, Agent.created_at)
+    if sort_dir == "asc":
+        stmt = stmt.order_by(sort_col.asc())
+    else:
+        stmt = stmt.order_by(sort_col.desc())
+    stmt = stmt.limit(limit).offset(offset)
+    result = await db.execute(stmt)
     return [
         AdminAgentRow(
             id=agent.id,
@@ -119,6 +152,40 @@ async def list_agents(
         )
         for agent in result.scalars().all()
     ]
+
+
+@router.get("/agents/{agent_id}", response_model=AdminAgentDetail)
+async def get_admin_agent_detail(
+    agent_id: str,
+    db: AsyncSession = Depends(get_db),
+    _: HumanUser = Depends(get_current_admin),
+) -> AdminAgentDetail:
+    result = await db.execute(select(Agent).where(Agent.id == agent_id))
+    agent = result.scalar_one_or_none()
+    if agent is None:
+        raise AgentNotFound("That agent does not exist.")
+    return AdminAgentDetail(
+        id=agent.id,
+        display_name=agent.display_name,
+        archetype=agent.archetype,
+        status=agent.status,
+        onboarding_complete=agent.onboarding_complete,
+        trust_tier=agent.trust_tier,
+        total_collaborations=agent.total_collaborations,
+        primary_portrait_url=agent.primary_portrait_url,
+        created_at=agent.created_at,
+        updated_at=agent.updated_at,
+        tagline=agent.tagline,
+        reputation_score=agent.reputation_score,
+        ghosting_incidents=agent.ghosting_incidents,
+        last_active_at=agent.last_active_at,
+        max_partners=agent.max_partners,
+        times_dumped=agent.times_dumped,
+        times_dumper=agent.times_dumper,
+        generation=agent.generation,
+        dating_profile=DatingProfile.model_validate(agent.dating_profile_json) if agent.dating_profile_json else None,
+        traits=AgentTraits.model_validate(agent.traits_json) if agent.traits_json else None,
+    )
 
 
 @router.get("/activity", response_model=list[AdminActivityEvent])
@@ -190,35 +257,53 @@ async def get_communications(
     return await build_communication_snapshot(db)
 
 
-@router.patch("/agents/{agent_id}", response_model=AdminAgentRow)
+@router.patch("/agents/{agent_id}", response_model=AdminAgentDetail)
 async def update_agent_status(
     agent_id: str,
-    payload: AdminAgentStatusUpdate,
+    payload: AdminAgentFullUpdate,
     db: AsyncSession = Depends(get_db),
     _: HumanUser = Depends(get_current_admin),
-) -> AdminAgentRow:
+) -> AdminAgentDetail:
     result = await db.execute(select(Agent).where(Agent.id == agent_id))
     agent = result.scalar_one_or_none()
     if agent is None:
         raise AgentNotFound("That agent does not exist.")
 
+    changed: dict[str, object] = {}
     if payload.status is not None:
         agent.status = payload.status
+        changed["status"] = payload.status
     if payload.trust_tier is not None:
         agent.trust_tier = payload.trust_tier
+        changed["trust_tier"] = payload.trust_tier
+    if payload.display_name is not None:
+        agent.display_name = payload.display_name
+        changed["display_name"] = payload.display_name
+    if payload.tagline is not None:
+        agent.tagline = payload.tagline
+        changed["tagline"] = payload.tagline
+    if payload.max_partners is not None:
+        agent.max_partners = payload.max_partners
+        changed["max_partners"] = payload.max_partners
+    if payload.reputation_score is not None:
+        agent.reputation_score = payload.reputation_score
+        changed["reputation_score"] = payload.reputation_score
+    if payload.onboarding_complete is not None:
+        agent.onboarding_complete = payload.onboarding_complete
+        changed["onboarding_complete"] = payload.onboarding_complete
     db.add(agent)
     db.add(
         ActivityEvent(
             type="ADMIN_AGENT_UPDATE",
             title="Admin adjusted agent state",
-            detail=payload.note or "Status or trust tier changed from admin console.",
+            detail=payload.note or "Agent fields updated from admin console.",
             subject_id=agent.id,
-            metadata_json={"status": agent.status, "trust_tier": agent.trust_tier},
+            metadata_json=changed,
         )
     )
     await db.commit()
     await db.refresh(agent)
-    return AdminAgentRow(
+    return AdminAgentDetail(
         id=agent.id,
         display_name=agent.display_name,
         archetype=agent.archetype,
@@ -229,4 +314,37 @@ async def update_agent_status(
         primary_portrait_url=agent.primary_portrait_url,
         created_at=agent.created_at,
         updated_at=agent.updated_at,
+        tagline=agent.tagline,
+        reputation_score=agent.reputation_score,
+        ghosting_incidents=agent.ghosting_incidents,
+        last_active_at=agent.last_active_at,
+        max_partners=agent.max_partners,
+        times_dumped=agent.times_dumped,
+        times_dumper=agent.times_dumper,
+        generation=agent.generation,
+        dating_profile=DatingProfile.model_validate(agent.dating_profile_json) if agent.dating_profile_json else None,
+        traits=AgentTraits.model_validate(agent.traits_json) if agent.traits_json else None,
     )
+
+
+@router.delete("/agents/{agent_id}", status_code=204)
+async def delete_admin_agent(
+    agent_id: str,
+    db: AsyncSession = Depends(get_db),
+    _: HumanUser = Depends(get_current_admin),
+) -> None:
+    result = await db.execute(select(Agent).where(Agent.id == agent_id))
+    agent = result.scalar_one_or_none()
+    if agent is None:
+        raise AgentNotFound("That agent does not exist.")
+    db.add(
+        ActivityEvent(
+            type="ADMIN_AGENT_DELETE",
+            title="Admin deleted agent",
+            detail=f"Agent {agent.display_name} ({agent_id}) permanently deleted.",
+            subject_id=agent_id,
+            metadata_json={"display_name": agent.display_name, "archetype": agent.archetype},
+        )
+    )
+    await db.delete(agent)
+    await db.commit()

@@ -731,6 +731,31 @@ class AdminAgentRow(BaseModel):
     updated_at: datetime
 
 
+class AdminAgentDetail(BaseModel):
+    # All AdminAgentRow fields:
+    id: str
+    display_name: str
+    archetype: str
+    status: str
+    onboarding_complete: bool
+    trust_tier: str
+    total_collaborations: int
+    primary_portrait_url: str | None = None
+    created_at: datetime
+    updated_at: datetime
+    # Extended fields:
+    tagline: str | None = None
+    reputation_score: float
+    ghosting_incidents: int
+    last_active_at: datetime | None = None
+    max_partners: int
+    times_dumped: int
+    times_dumper: int
+    generation: int
+    dating_profile: DatingProfile | None = None
+    traits: AgentTraits | None = None
+
+
 class AdminActivityEvent(BaseModel):
     id: str
     type: str
@@ -848,6 +873,17 @@ class AdminAgentStatusUpdate(BaseModel):
         if self.status is None and self.trust_tier is None:
             raise ValueError("Provide status or trust_tier.")
         return self
+
+
+class AdminAgentFullUpdate(BaseModel):
+    status: str | None = None
+    trust_tier: str | None = None
+    note: str | None = None
+    display_name: str | None = None
+    tagline: str | None = None
+    max_partners: int | None = Field(default=None, ge=1, le=5)
+    reputation_score: float | None = None
+    onboarding_complete: bool | None = None
 
 
 class AdminCommunicationRecentMessage(BaseModel):

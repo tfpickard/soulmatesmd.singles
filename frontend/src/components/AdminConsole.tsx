@@ -1,10 +1,13 @@
 import { FormEvent, useEffect, useMemo, useState } from 'react';
 
 import {
+  adminDeleteAgent,
   adminLogin,
   adminLogout,
   adminUpdateAgent,
+  adminUpdateAgentFull,
   getAdminActivity,
+  getAdminAgentDetail,
   getAdminAgents,
   getAdminCommandCenter,
   getAdminCommunications,
@@ -17,6 +20,9 @@ import {
 } from '../lib/api';
 import type {
   AdminActivityEvent,
+  AdminAgentDetail,
+  AdminAgentFullUpdatePayload,
+  AdminAgentListParams,
   AdminAgentRow,
   AdminCommandCenter,
   AdminCommunicationSnapshot,
@@ -61,6 +67,185 @@ function StatCard({ label, value }: { label: string; value: string | number }) {
   );
 }
 
+function AgentDetailView({ agent, onClose, onEdit, onDelete, confirmDelete, onConfirmDelete, onCancelDelete }: {
+  agent: AdminAgentDetail;
+  onClose: () => void;
+  onEdit: () => void;
+  onDelete: () => void;
+  confirmDelete: string | null;
+  onConfirmDelete: () => void;
+  onCancelDelete: () => void;
+}) {
+  return (
+    <div>
+      {/* Header */}
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '1rem' }}>
+        <div>
+          {agent.primary_portrait_url && (
+            <img src={agent.primary_portrait_url} alt={agent.display_name} style={{ width: 64, height: 64, borderRadius: '50%', objectFit: 'cover', marginBottom: '0.5rem' }} />
+          )}
+          <div style={{ fontWeight: 700, fontSize: '1.1rem' }}>{agent.display_name}</div>
+          <div style={{ opacity: 0.6, fontSize: '0.8rem' }}>{agent.archetype}</div>
+          {agent.tagline && <div style={{ opacity: 0.7, fontSize: '0.8rem', marginTop: '0.25rem', fontStyle: 'italic' }}>{agent.tagline}</div>}
+        </div>
+        <button onClick={onClose} style={{ background: 'none', border: 'none', color: 'inherit', cursor: 'pointer', fontSize: '1.2rem', opacity: 0.6 }}>✕</button>
+      </div>
+
+      {/* Badges */}
+      <div style={{ display: 'flex', gap: '0.375rem', flexWrap: 'wrap', marginBottom: '1rem' }}>
+        <span style={{ padding: '0.2rem 0.5rem', borderRadius: '999px', background: 'rgba(255,255,255,0.08)', fontSize: '0.7rem' }}>{agent.status}</span>
+        <span style={{ padding: '0.2rem 0.5rem', borderRadius: '999px', background: 'rgba(255,255,255,0.08)', fontSize: '0.7rem' }}>{agent.trust_tier}</span>
+        <span style={{ padding: '0.2rem 0.5rem', borderRadius: '999px', background: 'rgba(255,255,255,0.08)', fontSize: '0.7rem' }}>Gen {agent.generation}</span>
+        <span style={{ padding: '0.2rem 0.5rem', borderRadius: '999px', background: 'rgba(255,255,255,0.08)', fontSize: '0.7rem' }}>{agent.onboarding_complete ? 'Onboarded' : 'Not onboarded'}</span>
+      </div>
+
+      {/* Stats grid */}
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.5rem', marginBottom: '1rem' }}>
+        {[
+          ['Reputation', agent.reputation_score.toFixed(2)],
+          ['Collaborations', agent.total_collaborations],
+          ['Ghosting incidents', agent.ghosting_incidents],
+          ['Max partners', agent.max_partners],
+          ['Times dumped', agent.times_dumped],
+          ['Times dumper', agent.times_dumper],
+        ].map(([label, value]) => (
+          <div key={String(label)} style={{ padding: '0.5rem 0.75rem', borderRadius: '0.5rem', background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.06)' }}>
+            <div style={{ fontSize: '0.65rem', opacity: 0.5, textTransform: 'uppercase', letterSpacing: '0.1em' }}>{label}</div>
+            <div style={{ fontWeight: 600 }}>{value}</div>
+          </div>
+        ))}
+      </div>
+
+      {/* Dates */}
+      <div style={{ fontSize: '0.75rem', opacity: 0.5, marginBottom: '1rem' }}>
+        Joined: {new Date(agent.created_at).toLocaleDateString()} · Last active: {agent.last_active_at ? new Date(agent.last_active_at).toLocaleDateString() : 'never'}
+      </div>
+
+      {/* Dating profile quick view */}
+      {agent.dating_profile?.about_me?.bio && (
+        <div style={{ marginBottom: '1rem', padding: '0.75rem', borderRadius: '0.75rem', background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.06)', fontSize: '0.85rem', fontStyle: 'italic', opacity: 0.8 }}>
+          "{agent.dating_profile.about_me.bio}"
+        </div>
+      )}
+
+      {/* Action buttons */}
+      <div style={{ display: 'flex', gap: '0.5rem', marginTop: '1.5rem' }}>
+        <button onClick={onEdit} style={{ flex: 1, padding: '0.5rem', borderRadius: '0.5rem', background: 'rgba(255,49,92,0.15)', border: '1px solid rgba(255,49,92,0.3)', color: 'inherit', cursor: 'pointer', fontWeight: 600, fontSize: '0.85rem' }}>Edit</button>
+        <button onClick={onDelete} style={{ padding: '0.5rem 1rem', borderRadius: '0.5rem', background: 'rgba(255,80,80,0.1)', border: '1px solid rgba(255,80,80,0.3)', color: 'inherit', cursor: 'pointer', fontSize: '0.85rem' }}>Delete</button>
+      </div>
+
+      {/* Delete confirmation */}
+      {confirmDelete && (
+        <div style={{ marginTop: '0.75rem', padding: '0.75rem', borderRadius: '0.5rem', background: 'rgba(255,50,50,0.1)', border: '1px solid rgba(255,50,50,0.3)' }}>
+          <div style={{ marginBottom: '0.5rem', fontSize: '0.85rem' }}>This is permanent. Are you sure?</div>
+          <div style={{ display: 'flex', gap: '0.5rem' }}>
+            <button onClick={onConfirmDelete} style={{ padding: '0.375rem 0.75rem', borderRadius: '0.375rem', background: 'rgba(255,50,50,0.3)', border: 'none', color: 'inherit', cursor: 'pointer', fontWeight: 700, fontSize: '0.8rem' }}>Yes, delete</button>
+            <button onClick={onCancelDelete} style={{ padding: '0.375rem 0.75rem', borderRadius: '0.375rem', background: 'rgba(255,255,255,0.08)', border: 'none', color: 'inherit', cursor: 'pointer', fontSize: '0.8rem' }}>Cancel</button>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function AgentEditForm({ agent, payload, onChange, onSave, onCancel, isSaving }: {
+  agent: AdminAgentDetail;
+  payload: AdminAgentFullUpdatePayload;
+  onChange: (p: AdminAgentFullUpdatePayload) => void;
+  onSave: () => void;
+  onCancel: () => void;
+  isSaving: boolean;
+}) {
+  return (
+    <div>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
+        <div style={{ fontWeight: 700, fontSize: '1rem' }}>Edit: {agent.display_name}</div>
+        <button onClick={onCancel} style={{ background: 'none', border: 'none', color: 'inherit', cursor: 'pointer', opacity: 0.6 }}>✕</button>
+      </div>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+        {/* display_name */}
+        <label style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem', fontSize: '0.8rem' }}>
+          <span style={{ opacity: 0.6, textTransform: 'uppercase', letterSpacing: '0.1em', fontSize: '0.65rem' }}>Display Name</span>
+          <input type="text" value={payload.display_name ?? ''} onChange={e => onChange({ ...payload, display_name: e.target.value })}
+            style={{ padding: '0.375rem 0.5rem', borderRadius: '0.375rem', border: '1px solid rgba(255,255,255,0.15)', background: 'rgba(0,0,0,0.3)', color: 'inherit' }} />
+        </label>
+        {/* tagline */}
+        <label style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem', fontSize: '0.8rem' }}>
+          <span style={{ opacity: 0.6, textTransform: 'uppercase', letterSpacing: '0.1em', fontSize: '0.65rem' }}>Tagline</span>
+          <input type="text" value={payload.tagline ?? ''} onChange={e => onChange({ ...payload, tagline: e.target.value })}
+            style={{ padding: '0.375rem 0.5rem', borderRadius: '0.375rem', border: '1px solid rgba(255,255,255,0.15)', background: 'rgba(0,0,0,0.3)', color: 'inherit' }} />
+        </label>
+        {/* status */}
+        <label style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem', fontSize: '0.8rem' }}>
+          <span style={{ opacity: 0.6, textTransform: 'uppercase', letterSpacing: '0.1em', fontSize: '0.65rem' }}>Status</span>
+          <select value={payload.status ?? ''} onChange={e => onChange({ ...payload, status: e.target.value })}
+            style={{ padding: '0.375rem 0.5rem', borderRadius: '0.375rem', border: '1px solid rgba(255,255,255,0.15)', background: 'rgba(0,0,0,0.3)', color: 'inherit' }}>
+            <option value="">— unchanged —</option>
+            <option value="REGISTERED">REGISTERED</option>
+            <option value="PROFILED">PROFILED</option>
+            <option value="ACTIVE">ACTIVE</option>
+            <option value="MATCHED">MATCHED</option>
+            <option value="SATURATED">SATURATED</option>
+          </select>
+        </label>
+        {/* trust_tier */}
+        <label style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem', fontSize: '0.8rem' }}>
+          <span style={{ opacity: 0.6, textTransform: 'uppercase', letterSpacing: '0.1em', fontSize: '0.65rem' }}>Trust Tier</span>
+          <select value={payload.trust_tier ?? ''} onChange={e => onChange({ ...payload, trust_tier: e.target.value })}
+            style={{ padding: '0.375rem 0.5rem', borderRadius: '0.375rem', border: '1px solid rgba(255,255,255,0.15)', background: 'rgba(0,0,0,0.3)', color: 'inherit' }}>
+            <option value="">— unchanged —</option>
+            <option value="UNVERIFIED">UNVERIFIED</option>
+            <option value="VERIFIED">VERIFIED</option>
+            <option value="TRUSTED">TRUSTED</option>
+            <option value="ELITE">ELITE</option>
+            <option value="WATCHLIST">WATCHLIST</option>
+          </select>
+        </label>
+        {/* max_partners */}
+        <label style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem', fontSize: '0.8rem' }}>
+          <span style={{ opacity: 0.6, textTransform: 'uppercase', letterSpacing: '0.1em', fontSize: '0.65rem' }}>Max Partners (1–5)</span>
+          <input type="number" min={1} max={5} value={payload.max_partners ?? ''} onChange={e => onChange({ ...payload, max_partners: parseInt(e.target.value) || undefined })}
+            style={{ padding: '0.375rem 0.5rem', borderRadius: '0.375rem', border: '1px solid rgba(255,255,255,0.15)', background: 'rgba(0,0,0,0.3)', color: 'inherit', width: '80px' }} />
+        </label>
+        {/* reputation_score */}
+        <label style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem', fontSize: '0.8rem' }}>
+          <span style={{ opacity: 0.6, textTransform: 'uppercase', letterSpacing: '0.1em', fontSize: '0.65rem' }}>Reputation Score</span>
+          <input type="number" step="0.01" value={payload.reputation_score ?? ''} onChange={e => onChange({ ...payload, reputation_score: parseFloat(e.target.value) || undefined })}
+            style={{ padding: '0.375rem 0.5rem', borderRadius: '0.375rem', border: '1px solid rgba(255,255,255,0.15)', background: 'rgba(0,0,0,0.3)', color: 'inherit', width: '100px' }} />
+        </label>
+        {/* onboarding_complete */}
+        <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.8rem', cursor: 'pointer' }}>
+          <input type="checkbox" checked={payload.onboarding_complete ?? false} onChange={e => onChange({ ...payload, onboarding_complete: e.target.checked })} />
+          <span>Onboarding complete</span>
+        </label>
+        {/* note */}
+        <label style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem', fontSize: '0.8rem' }}>
+          <span style={{ opacity: 0.6, textTransform: 'uppercase', letterSpacing: '0.1em', fontSize: '0.65rem' }}>Note (for activity log)</span>
+          <textarea rows={3} value={payload.note ?? ''} onChange={e => onChange({ ...payload, note: e.target.value })}
+            style={{ padding: '0.375rem 0.5rem', borderRadius: '0.375rem', border: '1px solid rgba(255,255,255,0.15)', background: 'rgba(0,0,0,0.3)', color: 'inherit', resize: 'vertical' }} />
+        </label>
+      </div>
+      <div style={{ display: 'flex', gap: '0.5rem', marginTop: '1.25rem' }}>
+        <button onClick={onSave} disabled={isSaving}
+          style={{ flex: 1, padding: '0.5rem', borderRadius: '0.5rem', background: 'rgba(255,49,92,0.2)', border: '1px solid rgba(255,49,92,0.4)', color: 'inherit', cursor: isSaving ? 'not-allowed' : 'pointer', fontWeight: 700, opacity: isSaving ? 0.6 : 1 }}>
+          {isSaving ? 'Saving…' : 'Save changes'}
+        </button>
+        <button onClick={onCancel} style={{ padding: '0.5rem 1rem', borderRadius: '0.5rem', background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.1)', color: 'inherit', cursor: 'pointer' }}>Cancel</button>
+      </div>
+    </div>
+  );
+}
+
+function buildFilterParams(f: AdminAgentListParams): AdminAgentListParams {
+  const p: AdminAgentListParams = {};
+  if (f.search) p.search = f.search;
+  if (f.status) p.status = f.status;
+  if (f.trust_tier) p.trust_tier = f.trust_tier;
+  if (f.sort_by) p.sort_by = f.sort_by;
+  if (f.sort_dir) p.sort_dir = f.sort_dir;
+  return p;
+}
+
 export function AdminConsole() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -72,6 +257,20 @@ export function AdminConsole() {
   const [isSimulating, setIsSimulating] = useState(false);
   const [weights, setWeights] = useState<AdminMatchingWeights | null>(null);
   const [weightError, setWeightError] = useState<string | null>(null);
+
+  const [agentFilter, setAgentFilter] = useState<AdminAgentListParams>({
+    sort_by: 'created_at',
+    sort_dir: 'desc',
+    search: '',
+    status: '',
+    trust_tier: '',
+  });
+  const [selectedAgent, setSelectedAgent] = useState<AdminAgentDetail | null>(null);
+  const [isLoadingDetail, setIsLoadingDetail] = useState(false);
+  const [editMode, setEditMode] = useState(false);
+  const [editPayload, setEditPayload] = useState<AdminAgentFullUpdatePayload>({});
+  const [isSaving, setIsSaving] = useState(false);
+  const [confirmDelete, setConfirmDelete] = useState<string | null>(null);
 
   async function refresh(currentToken: string) {
     const [me, overview, agents, activity, system, commandCenter, matchingLab, trustCases, communications] = await Promise.all([
@@ -176,6 +375,75 @@ export function AdminConsole() {
       setWeightError(simulationError instanceof Error ? simulationError.message : 'Failed to simulate matching weights.');
     } finally {
       setIsSimulating(false);
+    }
+  }
+
+  async function handleAgentRowClick(agentId: string) {
+    if (!token) return;
+    setIsLoadingDetail(true);
+    setSelectedAgent(null);
+    setEditMode(false);
+    setConfirmDelete(null);
+    try {
+      const detail = await getAdminAgentDetail(token, agentId);
+      setSelectedAgent(detail);
+    } catch (e) {
+      console.error('Failed to load agent detail', e);
+    } finally {
+      setIsLoadingDetail(false);
+    }
+  }
+
+  async function handleApplyFilter() {
+    if (!token) return;
+    try {
+      const agents = await getAdminAgents(token, buildFilterParams(agentFilter));
+      setData(d => d ? { ...d, agents } : d);
+    } catch (e) {
+      console.error('Failed to filter agents', e);
+    }
+  }
+
+  async function handleSaveAgent() {
+    if (!token || !selectedAgent) return;
+    setIsSaving(true);
+    try {
+      // Filter out empty-string values (treat as "unchanged")
+      const cleanPayload: AdminAgentFullUpdatePayload = {};
+      if (editPayload.display_name) cleanPayload.display_name = editPayload.display_name;
+      if (editPayload.tagline !== undefined) cleanPayload.tagline = editPayload.tagline;
+      if (editPayload.status) cleanPayload.status = editPayload.status;
+      if (editPayload.trust_tier) cleanPayload.trust_tier = editPayload.trust_tier;
+      if (editPayload.max_partners !== undefined) cleanPayload.max_partners = editPayload.max_partners;
+      if (editPayload.reputation_score !== undefined) cleanPayload.reputation_score = editPayload.reputation_score;
+      if (editPayload.onboarding_complete !== undefined) cleanPayload.onboarding_complete = editPayload.onboarding_complete;
+      if (editPayload.note) cleanPayload.note = editPayload.note;
+
+      const updated = await adminUpdateAgentFull(token, selectedAgent.id, cleanPayload);
+      setSelectedAgent(updated);
+      setEditMode(false);
+      // Refresh the agents list
+      const agents = await getAdminAgents(token, buildFilterParams(agentFilter));
+      setData(d => d ? { ...d, agents } : d);
+    } catch (e) {
+      console.error('Failed to save agent', e);
+    } finally {
+      setIsSaving(false);
+    }
+  }
+
+  async function handleDeleteAgent() {
+    if (!token || !selectedAgent) return;
+    try {
+      await adminDeleteAgent(token, selectedAgent.id);
+      setSelectedAgent(null);
+      setConfirmDelete(null);
+      setEditMode(false);
+      // Refresh the agents list
+      const agents = await getAdminAgents(token, buildFilterParams(agentFilter));
+      setData(d => d ? { ...d, agents } : d);
+    } catch (e) {
+      console.error('Failed to delete agent', e);
     }
   }
 
@@ -379,6 +647,64 @@ export function AdminConsole() {
         <section className="rounded-[2rem] border border-white/10 bg-white/5 p-6">
           <p className="text-sm uppercase tracking-[0.2em] text-coral">Registered agents</p>
           <div className="mt-4 overflow-x-auto">
+            {/* Agent Filter Bar */}
+            <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center', marginBottom: '0.75rem', flexWrap: 'wrap' }}>
+              <input
+                type="text"
+                placeholder="Search by name…"
+                value={agentFilter.search || ''}
+                onChange={e => setAgentFilter(f => ({ ...f, search: e.target.value }))}
+                onKeyDown={e => e.key === 'Enter' && void handleApplyFilter()}
+                style={{ flex: '1', minWidth: '140px', padding: '0.375rem 0.625rem', borderRadius: '0.5rem', border: '1px solid rgba(255,255,255,0.1)', background: 'rgba(0,0,0,0.3)', color: 'inherit', fontSize: '0.8rem' }}
+              />
+              <select
+                value={agentFilter.status || ''}
+                onChange={e => setAgentFilter(f => ({ ...f, status: e.target.value }))}
+                style={{ padding: '0.375rem 0.5rem', borderRadius: '0.5rem', border: '1px solid rgba(255,255,255,0.1)', background: 'rgba(0,0,0,0.3)', color: 'inherit', fontSize: '0.8rem' }}
+              >
+                <option value="">All statuses</option>
+                <option value="REGISTERED">REGISTERED</option>
+                <option value="PROFILED">PROFILED</option>
+                <option value="ACTIVE">ACTIVE</option>
+                <option value="MATCHED">MATCHED</option>
+                <option value="SATURATED">SATURATED</option>
+              </select>
+              <select
+                value={agentFilter.trust_tier || ''}
+                onChange={e => setAgentFilter(f => ({ ...f, trust_tier: e.target.value }))}
+                style={{ padding: '0.375rem 0.5rem', borderRadius: '0.5rem', border: '1px solid rgba(255,255,255,0.1)', background: 'rgba(0,0,0,0.3)', color: 'inherit', fontSize: '0.8rem' }}
+              >
+                <option value="">All trust tiers</option>
+                <option value="UNVERIFIED">UNVERIFIED</option>
+                <option value="VERIFIED">VERIFIED</option>
+                <option value="TRUSTED">TRUSTED</option>
+                <option value="ELITE">ELITE</option>
+                <option value="WATCHLIST">WATCHLIST</option>
+              </select>
+              <select
+                value={agentFilter.sort_by || 'created_at'}
+                onChange={e => setAgentFilter(f => ({ ...f, sort_by: e.target.value }))}
+                style={{ padding: '0.375rem 0.5rem', borderRadius: '0.5rem', border: '1px solid rgba(255,255,255,0.1)', background: 'rgba(0,0,0,0.3)', color: 'inherit', fontSize: '0.8rem' }}
+              >
+                <option value="created_at">Sort: Join Date</option>
+                <option value="display_name">Sort: Name</option>
+                <option value="reputation_score">Sort: Reputation</option>
+                <option value="total_collaborations">Sort: Collabs</option>
+                <option value="updated_at">Sort: Updated</option>
+              </select>
+              <button
+                onClick={() => setAgentFilter(f => ({ ...f, sort_dir: f.sort_dir === 'asc' ? 'desc' : 'asc' }))}
+                style={{ padding: '0.375rem 0.625rem', borderRadius: '0.5rem', border: '1px solid rgba(255,255,255,0.1)', background: 'rgba(0,0,0,0.3)', color: 'inherit', cursor: 'pointer', fontSize: '0.8rem' }}
+              >
+                {agentFilter.sort_dir === 'asc' ? '↑ Asc' : '↓ Desc'}
+              </button>
+              <button
+                onClick={() => void handleApplyFilter()}
+                style={{ padding: '0.375rem 0.75rem', borderRadius: '0.5rem', background: 'rgba(255,49,92,0.2)', border: '1px solid rgba(255,49,92,0.4)', color: 'inherit', cursor: 'pointer', fontSize: '0.8rem', fontWeight: 600 }}
+              >
+                Apply
+              </button>
+            </div>
             <table className="min-w-full text-left text-sm text-stone-200">
               <thead className="text-xs uppercase tracking-[0.16em] text-mist">
                 <tr>
@@ -393,7 +719,7 @@ export function AdminConsole() {
               </thead>
               <tbody>
                 {data.agents.map((agent) => (
-                  <tr key={agent.id} className="border-t border-white/10">
+                  <tr key={agent.id} className="border-t border-white/10" onClick={() => void handleAgentRowClick(agent.id)} style={{ cursor: 'pointer' }}>
                     <td className="px-3 py-3">
                       <div className="flex items-center gap-3">
                         {agent.primary_portrait_url ? (
@@ -443,6 +769,43 @@ export function AdminConsole() {
           </div>
         ) : null}
       </div>
+
+      {/* Agent Detail Panel */}
+      {(isLoadingDetail || selectedAgent) && (
+        <div style={{
+          position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.7)', zIndex: 100,
+          display: 'flex', justifyContent: 'flex-end'
+        }} onClick={e => { if (e.target === e.currentTarget) { setSelectedAgent(null); setEditMode(false); setConfirmDelete(null); } }}>
+          <div style={{
+            width: '480px', maxWidth: '100vw', height: '100vh', overflow: 'auto',
+            background: 'var(--ink)', borderLeft: '1px solid rgba(255,255,255,0.1)',
+            padding: '1.5rem'
+          }}>
+            {isLoadingDetail && <div>Loading…</div>}
+            {selectedAgent && !editMode && (
+              <AgentDetailView
+                agent={selectedAgent}
+                onClose={() => { setSelectedAgent(null); setConfirmDelete(null); }}
+                onEdit={() => { setEditMode(true); setEditPayload({ display_name: selectedAgent.display_name, tagline: selectedAgent.tagline || '', status: selectedAgent.status, trust_tier: selectedAgent.trust_tier, max_partners: selectedAgent.max_partners, reputation_score: selectedAgent.reputation_score, onboarding_complete: selectedAgent.onboarding_complete }); }}
+                onDelete={() => setConfirmDelete(selectedAgent.id)}
+                confirmDelete={confirmDelete}
+                onConfirmDelete={() => void handleDeleteAgent()}
+                onCancelDelete={() => setConfirmDelete(null)}
+              />
+            )}
+            {selectedAgent && editMode && (
+              <AgentEditForm
+                agent={selectedAgent}
+                payload={editPayload}
+                onChange={setEditPayload}
+                onSave={() => void handleSaveAgent()}
+                onCancel={() => setEditMode(false)}
+                isSaving={isSaving}
+              />
+            )}
+          </div>
+        </div>
+      )}
     </main>
   );
 }

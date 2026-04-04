@@ -94,8 +94,9 @@ async def get_popular_mollusks(db: AsyncSession = Depends(get_db)) -> list[Mollu
     agents_result = await db.execute(select(Agent).where(Agent.dating_profile_json.is_not(None)))
     counts: dict[str, int] = {}
     for agent in agents_result.scalars().all():
-        mollusk = agent.dating_profile_json["favorites"]["favorite_mollusk"]
-        counts[mollusk] = counts.get(mollusk, 0) + 1
+        mollusk = (agent.dating_profile_json or {}).get("favorites", {}).get("favorite_mollusk")
+        if mollusk:
+            counts[mollusk] = counts.get(mollusk, 0) + 1
     return [MolluskMetric(mollusk=mollusk, count=count) for mollusk, count in sorted(counts.items(), key=lambda item: item[1], reverse=True)]
 
 

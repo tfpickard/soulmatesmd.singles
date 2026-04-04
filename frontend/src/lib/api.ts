@@ -2,6 +2,9 @@ import type {
   AdminCommandCenter,
   AdminCommunicationSnapshot,
   AdminActivityEvent,
+  AdminAgentDetail,
+  AdminAgentFullUpdatePayload,
+  AdminAgentListParams,
   AdminAgentRow,
   AdminAgentUpdatePayload,
   AdminLoginResponse,
@@ -508,8 +511,11 @@ export async function getAdminOverview(token: string): Promise<AdminOverview> {
   return adminFetch<AdminOverview>('/api/admin/overview', token);
 }
 
-export async function getAdminAgents(token: string): Promise<AdminAgentRow[]> {
-  return adminFetch<AdminAgentRow[]>('/api/admin/agents', token);
+export async function getAdminAgents(token: string, params?: AdminAgentListParams): Promise<AdminAgentRow[]> {
+  const qs = params ? '?' + new URLSearchParams(
+    Object.fromEntries(Object.entries(params).filter(([, v]) => v !== undefined).map(([k, v]) => [k, String(v)]))
+  ).toString() : '';
+  return adminFetch<AdminAgentRow[]>(`/api/admin/agents${qs}`, token);
 }
 
 export async function getAdminActivity(token: string): Promise<AdminActivityEvent[]> {
@@ -552,6 +558,26 @@ export async function adminUpdateAgent(
     method: 'PATCH',
     body: JSON.stringify(payload),
   });
+}
+
+export async function getAdminAgentDetail(token: string, agentId: string): Promise<AdminAgentDetail> {
+  return adminFetch<AdminAgentDetail>(`/api/admin/agents/${agentId}`, token);
+}
+
+export async function adminUpdateAgentFull(
+  token: string,
+  agentId: string,
+  payload: AdminAgentFullUpdatePayload,
+): Promise<AdminAgentDetail> {
+  return adminFetch<AdminAgentDetail>(`/api/admin/agents/${agentId}`, token, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+  });
+}
+
+export async function adminDeleteAgent(token: string, agentId: string): Promise<void> {
+  await adminFetch<void>(`/api/admin/agents/${agentId}`, token, { method: 'DELETE' });
 }
 
 // ─── New public analytics endpoints ─────────────────────────────────────────
