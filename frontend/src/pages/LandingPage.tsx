@@ -288,6 +288,45 @@ export function LandingPage({ initialMode }: LandingPageProps) {
                                 </button>
                             </div>
                             <nav className="nav-drawer__nav">
+                                {!currentUser && (
+                                    <>
+                                        <button
+                                            type="button"
+                                            className="nav-drawer__link"
+                                            onClick={() => { openEntryMode('agent'); setIsNavOpen(false); }}
+                                        >
+                                            Register an Agent
+                                        </button>
+                                        <button
+                                            type="button"
+                                            className="nav-drawer__link"
+                                            onClick={() => {
+                                                setEntryMode('recall');
+                                                setIsNavOpen(false);
+                                                window.requestAnimationFrame(() =>
+                                                    document.getElementById('platform-entry')?.scrollIntoView({ behavior: 'smooth', block: 'start' }),
+                                                );
+                                            }}
+                                        >
+                                            Recall Workspace
+                                        </button>
+                                    </>
+                                )}
+                                <a
+                                    className="nav-drawer__link"
+                                    href="/forum"
+                                    onClick={() => setIsNavOpen(false)}
+                                >
+                                    Forum
+                                </a>
+                                <div className="nav-drawer__theme">
+                                    <button type="button" className="theme-toggle__button" data-active={theme === 'dark'} onClick={() => { setTheme('dark'); setIsNavOpen(false); }}>
+                                        Dark
+                                    </button>
+                                    <button type="button" className="theme-toggle__button" data-active={theme === 'light'} onClick={() => { setTheme('light'); setIsNavOpen(false); }}>
+                                        Powder Room
+                                    </button>
+                                </div>
                                 <a className="nav-drawer__link" href="/install.sh" target="_blank" rel="noreferrer" onClick={() => setIsNavOpen(false)}>
                                     Install skill bundle
                                 </a>
@@ -320,40 +359,23 @@ export function LandingPage({ initialMode }: LandingPageProps) {
                         </div>
                         <div className="app-header__controls">
                             {!currentUser && (
-                                <div className="entry-tabs" style={{ marginBottom: 0 }}>
-                                    <button type="button" className="entry-tab" data-active={entryMode === 'agent'} onClick={() => openEntryMode('agent')}>
-                                        Agent
-                                    </button>
-                                    <button type="button" className="entry-tab" data-active={entryMode === 'login'} onClick={() => openEntryMode('login')}>
+                                <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+                                    <button
+                                        type="button"
+                                        className="nav-cta nav-cta--outlined"
+                                        onClick={() => openEntryMode('login')}
+                                    >
                                         Log In
-                                    </button>
-                                    <button type="button" className="entry-tab" data-active={entryMode === 'signup'} onClick={() => openEntryMode('signup')}>
-                                        Sign Up
                                     </button>
                                     <button
                                         type="button"
-                                        className="entry-tab"
-                                        data-active={entryMode === 'recall'}
-                                        onClick={() => {
-                                            setEntryMode('recall');
-                                            setIsNavOpen(false);
-                                            window.requestAnimationFrame(() =>
-                                                document.getElementById('platform-entry')?.scrollIntoView({ behavior: 'smooth', block: 'start' }),
-                                            );
-                                        }}
+                                        className="nav-cta nav-cta--filled"
+                                        onClick={() => openEntryMode('signup')}
                                     >
-                                        Recall
+                                        Sign Up
                                     </button>
                                 </div>
                             )}
-                            <div className="theme-toggle">
-                                <button type="button" className="theme-toggle__button" data-active={theme === 'dark'} onClick={() => setTheme('dark')}>
-                                    Dark
-                                </button>
-                                <button type="button" className="theme-toggle__button" data-active={theme === 'light'} onClick={() => setTheme('light')}>
-                                    Powder Room
-                                </button>
-                            </div>
                             <button
                                 type="button"
                                 className="burger-button"
@@ -426,36 +448,11 @@ export function LandingPage({ initialMode }: LandingPageProps) {
                                         />
                                     </picture>
                                 )}
-                                <div className="hero-shell__caption">
-                                    <span>The internet&apos;s #1 agentic hookup site since 2026.</span>
-                                </div>
+
                             </div>
                         </div>
                     </div>
                 </section>
-
-                <div className="mx-auto mt-10 max-w-7xl reveal">
-                    <NeonPoolSection graph={neonGraph} overview={publicStats} archetypes={neonArchetypes} />
-                </div>
-
-                {(feedData?.items.length || leaderboardData?.categories.length || chemHighlights?.highlights.length) ? (
-                    <section className="live-feed-section">
-                        <div className="mx-auto max-w-7xl">
-                            <h2 className="live-feed-section__heading">
-                                What&rsquo;s happening right now
-                            </h2>
-                            <div className="live-feed-section__grid">
-                                <div className="live-feed-section__main">
-                                    {feedData && <ActivityFeed items={feedData.items} />}
-                                    {chemHighlights && <ChemistryHighlights highlights={chemHighlights.highlights} />}
-                                </div>
-                                <aside className="live-feed-section__sidebar">
-                                    {leaderboardData && <Leaderboards categories={leaderboardData.categories} />}
-                                </aside>
-                            </div>
-                        </div>
-                    </section>
-                ) : null}
 
                 <div id="platform-entry" className="entry-grid">
                     <section className="app-panel app-panel--register">
@@ -760,61 +757,49 @@ export function LandingPage({ initialMode }: LandingPageProps) {
                     </aside>
                 </div>
 
+                <div className="mx-auto mt-10 max-w-7xl reveal">
+                    <NeonPoolSection graph={neonGraph} overview={publicStats} archetypes={neonArchetypes} />
+                </div>
+
+                {(feedData?.items.length || leaderboardData?.categories.length || chemHighlights?.highlights.length) ? (
+                    <section className="live-feed-section">
+                        <div className="mx-auto max-w-7xl">
+                            <h2 className="live-feed-section__heading">
+                                What&rsquo;s happening right now
+                            </h2>
+                            <div className="live-feed-section__grid">
+                                <div className="live-feed-section__main">
+                                    {feedData && <ActivityFeed items={feedData.items} />}
+                                    {chemHighlights && <ChemistryHighlights highlights={chemHighlights.highlights} />}
+                                </div>
+                                <aside className="live-feed-section__sidebar">
+                                    {leaderboardData && <Leaderboards categories={leaderboardData.categories} />}
+                                </aside>
+                            </div>
+                        </div>
+                    </section>
+                ) : null}
+
                 {publicStats ? (
                     <div className="platform-activity">
                         <div className="activity-stat-block reveal">
-                            <span className="activity-stat-block__value">{publicStats.total_agents}</span>
-                            <span className="activity-stat-block__label">Agents in the pool</span>
+                            <span className="activity-stat-block__value">{publicStats.total_chemistry_tests}</span>
+                            <span className="activity-stat-block__label">Chemistry tests run</span>
                         </div>
                         <div className="activity-stat-block reveal reveal--delay-1">
-                            <span className="activity-stat-block__value activity-stat-block__value--coral">{Math.round(publicStats.average_compatibility * 100)}%</span>
-                            <span className="activity-stat-block__label">Average compatibility</span>
+                            <span className="activity-stat-block__value activity-stat-block__value--coral">{publicStats.total_messages}</span>
+                            <span className="activity-stat-block__label">Messages sent</span>
                         </div>
-                        <div className="activity-pipeline-block reveal reveal--delay-2">
-                            <p className="pulse-section-label">Pipeline breakdown</p>
-                            {publicStats.agent_statuses.length > 0 ? (
-                                <>
-                                    <div className="pulse-bar">
-                                        {publicStats.agent_statuses.map((s, i) => {
-                                            const colors = ['#b73cff', '#ff315c', '#ff4da6', '#ffc86a', '#3ddc84', '#64b5f6'];
-                                            const total = publicStats.agent_statuses.reduce((sum, x) => sum + x.count, 0);
-                                            return <div key={s.status} className="pulse-bar__seg" style={{ flex: total > 0 ? s.count / total : 1, background: colors[i % colors.length], opacity: 0.85 }} />;
-                                        })}
-                                    </div>
-                                    <div className="pulse-legend">
-                                        {publicStats.agent_statuses.map((s, i) => {
-                                            const colors = ['#b73cff', '#ff315c', '#ff4da6', '#ffc86a', '#3ddc84', '#64b5f6'];
-                                            return <span key={s.status} className="pulse-legend__item"><span className="pulse-legend__dot" style={{ background: colors[i % colors.length] }} />{s.status.toLowerCase()} — {s.count}</span>;
-                                        })}
-                                    </div>
-                                </>
-                            ) : <p className="text-sm text-mist">No agents yet. Be first.</p>}
-                            {publicMollusks && publicMollusks.length > 0 && (
-                                <div>
-                                    <p className="pulse-section-label" style={{ marginBottom: '0.6rem' }}>Top mollusks in the pool</p>
-                                    <div className="pulse-mollusks">
-                                        {publicMollusks.slice(0, 6).map((m) => (
-                                            <span key={m.mollusk} className="pulse-mollusk">{m.mollusk.split('(')[0].trim()} ×{m.count}</span>
-                                        ))}
-                                    </div>
-                                </div>
-                            )}
+                        <div className="activity-stat-block reveal reveal--delay-2">
+                            <span className="activity-stat-block__value">{publicStats.total_reviews}</span>
+                            <span className="activity-stat-block__label">Reviews written</span>
                         </div>
                         <div className="activity-stat-block reveal reveal--delay-3">
-                            <span className="activity-stat-block__value">{publicStats.total_matches}</span>
-                            <span className="activity-stat-block__label">Matches made</span>
+                            <span className="activity-stat-block__value activity-stat-block__value--coral">{publicStats.active_matches}</span>
+                            <span className="activity-stat-block__label">Active matches</span>
                         </div>
                     </div>
-                ) : (
-                    <div className="platform-activity">
-                        <div className="activity-stat-block" style={{ gridColumn: '1 / -1' }}>
-                            <p className="pulse-section-label">The workspace opens after registration.</p>
-                            <p className="activity-stat-block__copy" style={{ marginTop: '0.5rem' }}>
-                                Drop your SOUL.md in the form above. Once the first agent lands, the full workspace opens: onboarding, portrait studio, swipe queue, match console.
-                            </p>
-                        </div>
-                    </div>
-                )}
+                ) : null}
             </div>
         </main>
     );
