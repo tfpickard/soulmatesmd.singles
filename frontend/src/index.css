@@ -388,6 +388,49 @@ body::after {
   line-height: 1;
 }
 
+/* Nav bar CTA buttons (Log In / Sign Up) */
+.nav-cta {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.45rem 1rem;
+  font-family: var(--font-body);
+  font-size: 0.8rem;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s, border-color 0.15s;
+  white-space: nowrap;
+}
+
+.nav-cta--outlined {
+  background: transparent;
+  color: rgb(var(--color-paper));
+  border: 1px solid rgba(var(--color-paper), 0.25);
+}
+
+.nav-cta--outlined:hover {
+  border-color: rgba(var(--color-coral), 0.6);
+  color: rgb(var(--color-coral));
+}
+
+.nav-cta--filled {
+  background: rgb(var(--color-coral));
+  color: #fff;
+  border: 1px solid transparent;
+}
+
+.nav-cta--filled:hover {
+  background: rgba(var(--color-coral), 0.85);
+}
+
+/* Theme toggle inside nav drawer */
+.nav-drawer__theme {
+  padding: 0.5rem 1.5rem;
+  display: flex;
+  gap: 0.5rem;
+}
+
 .nav-drawer-shell {
   position: fixed;
   inset: 0;
@@ -838,6 +881,16 @@ input {
 textarea:focus,
 input:focus {
   box-shadow: 0 0 0 0.2rem rgba(255, 77, 166, 0.14);
+}
+
+/* Keyboard focus — visible ring for all interactive elements */
+:focus-visible {
+  outline: 2px solid rgb(var(--color-coral));
+  outline-offset: 2px;
+}
+
+:focus:not(:focus-visible) {
+  outline: none;
 }
 
 :root[data-theme='light'] .theme-toggle,
@@ -1399,6 +1452,7 @@ input:focus {
   font-size: 2.6rem;
   font-weight: 700;
   line-height: 1;
+  font-variant-numeric: lining-nums tabular-nums;
   color: rgb(var(--color-paper));
 }
 
@@ -1761,6 +1815,7 @@ input:focus {
   font-size: 3rem;
   font-weight: 700;
   line-height: 1;
+  font-variant-numeric: lining-nums tabular-nums;
   color: rgb(var(--color-paper));
 }
 
@@ -1784,7 +1839,8 @@ input:focus {
   margin: 0;
   font-size: 0.68rem;
   letter-spacing: 0.2em;
-  text-transform: uppercase;
+  text-transform: none;
+  font-weight: 600;
   color: rgb(var(--color-mist));
 }
 
@@ -1902,6 +1958,7 @@ input:focus {
   font-size: 5rem;
   font-weight: 700;
   line-height: 1;
+  font-variant-numeric: lining-nums tabular-nums;
   color: rgb(var(--color-paper));
 }
 
@@ -1911,8 +1968,8 @@ input:focus {
 
 .activity-stat-block__label {
   font-size: 0.72rem;
-  letter-spacing: 0.22em;
-  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  text-transform: none;
   color: rgb(var(--color-mist));
 }
 

@@ -200,7 +200,7 @@ export function AgentPublicProfilePage() {
                                 ['Reputation', agent.reputation_score.toFixed(1)],
                                 ['Collaborations', agent.total_collaborations],
                                 ['Ghosting incidents', agent.ghosting_incidents],
-                                ['Ghosting incidents', agent.ghosting_incidents],
+                                ['Trust tier', agent.trust_tier],
                             ].map(([label, val]) => (
                                 <div key={label as string} className="text-center">
                                     <p className="font-display text-2xl text-coral">{val}</p>

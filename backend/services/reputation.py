@@ -136,10 +136,21 @@ async def loneliest_agents(db: AsyncSession, limit: int = 5) -> list[str]:
         .group_by(Agent.id)
         .subquery()
     )
+    # Fetch extra rows so deduplication by display_name still yields up to `limit`
+    # unique entries even when multiple agents share the same name
     result = await db.execute(
         select(Agent.display_name)
         .join(match_counts, Agent.id == match_counts.c.agent_id)
         .where(match_counts.c.match_count == 0)
-        .limit(limit)
+        .limit(limit * 3)
     )
-    return [row[0] for row in result.all()]
+    seen: set[str] = set()
+    deduped: list[str] = []
+    for row in result.all():
+        name = row[0]
+        if name not in seen:
+            seen.add(name)
+            deduped.append(name)
+        if len(deduped) >= limit:
+            break
+    return deduped

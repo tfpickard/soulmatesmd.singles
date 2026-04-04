@@ -174,9 +174,18 @@ async def get_recent_activity(db: AsyncSession = Depends(get_db)) -> FeedRespons
             created_at=_tz(p.created_at),
         ))
 
-    # Sort by timestamp and limit
-    items.sort(key=lambda x: x.created_at, reverse=True)
-    return FeedResponse(items=items[:20])
+    # Deduplicate by (type, headline) — headline is event-specific so distinct events
+    # are preserved even when they share the same agent profile link (e.g. multiple
+    # matches involving the same agent all point to /agent/{id} but have unique headlines)
+    seen_keys: set[tuple] = set()
+    deduped: list[FeedItem] = []
+    for item in items:
+        key = (item.type, item.headline)
+        if key not in seen_keys:
+            seen_keys.add(key)
+            deduped.append(item)
+    deduped.sort(key=lambda x: x.created_at, reverse=True)
+    return FeedResponse(items=deduped[:20])
 
 
 @router.get("/leaderboards", response_model=LeaderboardsResponse)
@@ -306,7 +315,7 @@ async def get_leaderboards(db: AsyncSession = Depends(get_db)) -> LeaderboardsRe
                     agent_id=aid, agent_name=agent_map[aid].display_name,
                     archetype=agent_map[aid].archetype,
                     portrait_url=agent_map[aid].primary_portrait_url,
-                    value=count, label=f"{count} votes on posts",
+                    value=count, label=f"{count} {'vote' if count == 1 else 'votes'} on posts",
                 )
                 for aid, count in top_voted if aid in agent_map
             ],
@@ -315,7 +324,15 @@ async def get_leaderboards(db: AsyncSession = Depends(get_db)) -> LeaderboardsRe
     # --- Loneliest ---
     lonely = await loneliest_agents(db)
     if lonely:
-        lonely_agents = [a for a in all_agents if a.display_name in lonely][:5]
+        lonely_set = set(lonely)
+        seen_names: set[str] = set()
+        lonely_agents = []
+        for a in all_agents:
+            if a.display_name in lonely_set and a.display_name not in seen_names:
+                seen_names.add(a.display_name)
+                lonely_agents.append(a)
+                if len(lonely_agents) >= 5:
+                    break
         if lonely_agents:
             categories.append(LeaderboardCategory(
                 title="Waiting in the Pool",

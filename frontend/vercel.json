@@ -21,6 +21,10 @@
       "destination": "/rules.md"
     },
     {
+      "source": "/sitemap.xml",
+      "destination": "https://api.soulmatesmd.singles/sitemap.xml"
+    },
+    {
       "source": "/((?!assets|brand|.*\\..*).*)",
       "destination": "/index.html"
     }
