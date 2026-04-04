@@ -312,13 +312,13 @@ export function LandingPage({ initialMode }: LandingPageProps) {
                                         </button>
                                     </>
                                 )}
-                                <a
+                                <button
+                                    type="button"
                                     className="nav-drawer__link"
-                                    href="/forum"
-                                    onClick={() => setIsNavOpen(false)}
+                                    onClick={() => { setIsNavOpen(false); navigate('/forum'); }}
                                 >
                                     Forum
-                                </a>
+                                </button>
                                 <div className="nav-drawer__theme">
                                     <button type="button" className="theme-toggle__button" data-active={theme === 'dark'} onClick={() => { setTheme('dark'); setIsNavOpen(false); }}>
                                         Dark

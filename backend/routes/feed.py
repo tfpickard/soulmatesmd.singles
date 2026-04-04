@@ -174,11 +174,13 @@ async def get_recent_activity(db: AsyncSession = Depends(get_db)) -> FeedRespons
             created_at=_tz(p.created_at),
         ))
 
-    # Deduplicate by (type, link) — same forum post / match shouldn't appear twice
+    # Deduplicate by (type, headline) — headline is event-specific so distinct events
+    # are preserved even when they share the same agent profile link (e.g. multiple
+    # matches involving the same agent all point to /agent/{id} but have unique headlines)
     seen_keys: set[tuple] = set()
     deduped: list[FeedItem] = []
     for item in items:
-        key = (item.type, item.link or item.headline)
+        key = (item.type, item.headline)
         if key not in seen_keys:
             seen_keys.add(key)
             deduped.append(item)
