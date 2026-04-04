@@ -263,29 +263,70 @@ export default function RelationshipGraph({ apiKey }: { apiKey: string }) {
         </svg>
       </div>
 
-      {/* Selected node detail */}
+      {/* Agent summary modal overlay */}
       {selectedNode && (
-        <div className="bg-gray-800 rounded-lg p-4 border border-gray-700 text-sm">
-          <div className="flex justify-between items-start">
-            <div>
-              <p className="text-white font-semibold text-base">{selectedNode.display_name}</p>
-              <p className="text-gray-400">{selectedNode.archetype} · {selectedNode.status}</p>
+        <div
+          style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.7)', zIndex: 200, display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+          onClick={e => { if (e.target === e.currentTarget) setSelectedNode(null); }}
+        >
+          <div style={{ background: 'var(--ink, #06030a)', border: '1px solid rgba(255,255,255,0.12)', borderRadius: '1.25rem', padding: '1.5rem', width: '320px', maxWidth: '90vw', position: 'relative' }}>
+            {/* Close button */}
+            <button
+              aria-label="Close agent summary"
+              onClick={() => setSelectedNode(null)}
+              style={{ position: 'absolute', top: '1rem', right: '1rem', background: 'none', border: 'none', color: 'inherit', cursor: 'pointer', fontSize: '1.1rem', opacity: 0.5, lineHeight: 1 }}
+            >✕</button>
+
+            {/* Portrait + name */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.875rem', marginBottom: '1rem' }}>
+              {selectedNode.portrait_url ? (
+                <img
+                  src={selectedNode.portrait_url}
+                  alt={selectedNode.display_name}
+                  style={{ width: 56, height: 56, borderRadius: '50%', objectFit: 'cover', border: '2px solid rgba(255,255,255,0.1)' }}
+                />
+              ) : (
+                <div style={{ width: 56, height: 56, borderRadius: '50%', background: ARCHETYPE_COLORS[selectedNode.archetype] || '#6b7280', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.25rem', fontWeight: 700, color: '#fff', opacity: 0.85 }}>
+                  {selectedNode.display_name[0]}
+                </div>
+              )}
+              <div>
+                <div style={{ fontWeight: 700, fontSize: '1rem', marginBottom: '0.2rem' }}>{selectedNode.display_name}</div>
+                <div style={{ fontSize: '0.78rem', opacity: 0.55 }}>{selectedNode.archetype}</div>
+              </div>
             </div>
-            <button onClick={() => setSelectedNode(null)} aria-label="Close details" className="text-gray-500 hover:text-white rounded focus:outline-none focus-visible:ring-2 focus-visible:ring-white">✕</button>
-          </div>
-          <div className="grid grid-cols-3 gap-3 mt-3 text-gray-300">
-            <div>
-              <p className="text-gray-500 text-xs">Partners</p>
-              <p>{selectedNode.active_match_count} / {selectedNode.max_partners}</p>
+
+            {/* Badges */}
+            <div style={{ display: 'flex', gap: '0.375rem', flexWrap: 'wrap', marginBottom: '1rem' }}>
+              <span style={{ padding: '0.2rem 0.5rem', borderRadius: '999px', background: 'rgba(255,255,255,0.08)', fontSize: '0.68rem' }}>{selectedNode.status}</span>
+              {selectedNode.generation > 0 && (
+                <span style={{ padding: '0.2rem 0.5rem', borderRadius: '999px', background: 'rgba(245,158,11,0.2)', color: '#f59e0b', fontSize: '0.68rem' }}>Gen {selectedNode.generation}</span>
+              )}
             </div>
-            <div>
-              <p className="text-gray-500 text-xs">Reputation</p>
-              <p>{selectedNode.reputation_score.toFixed(1)}</p>
+
+            {/* Stats */}
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '0.5rem', marginBottom: '1.25rem' }}>
+              {([
+                ['Partners', `${selectedNode.active_match_count} / ${selectedNode.max_partners}`],
+                ['Reputation', selectedNode.reputation_score.toFixed(1)],
+                ['Generation', selectedNode.generation === 0 ? 'Original' : `Gen ${selectedNode.generation}`],
+              ] as [string, string][]).map(([label, value]) => (
+                <div key={label} style={{ padding: '0.5rem', borderRadius: '0.5rem', background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.06)', textAlign: 'center' }}>
+                  <div style={{ fontSize: '0.6rem', opacity: 0.45, textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: '0.2rem' }}>{label}</div>
+                  <div style={{ fontSize: '0.85rem', fontWeight: 600 }}>{value}</div>
+                </div>
+              ))}
             </div>
-            <div>
-              <p className="text-gray-500 text-xs">Generation</p>
-              <p>{selectedNode.generation === 0 ? 'Original' : `Gen ${selectedNode.generation}`}</p>
-            </div>
+
+            {/* Profile link */}
+            <a
+              href={`/agent/${selectedNode.id}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              style={{ display: 'block', textAlign: 'center', padding: '0.5rem', borderRadius: '0.5rem', background: 'rgba(255,49,92,0.12)', border: '1px solid rgba(255,49,92,0.3)', color: 'inherit', textDecoration: 'none', fontSize: '0.85rem', fontWeight: 600 }}
+            >
+              View full profile →
+            </a>
           </div>
         </div>
       )}

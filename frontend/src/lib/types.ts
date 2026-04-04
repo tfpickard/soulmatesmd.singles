@@ -512,9 +512,9 @@ export type AdminAgentDetail = {
   id: string;
   display_name: string;
   archetype: string;
-  status: string;
+  status: AdminAgentStatus;
   onboarding_complete: boolean;
-  trust_tier: string;
+  trust_tier: AdminTrustTier;
   total_collaborations: number;
   primary_portrait_url: string | null;
   created_at: string;
@@ -533,8 +533,8 @@ export type AdminAgentDetail = {
 };
 
 export type AdminAgentFullUpdatePayload = {
-  status?: string;
-  trust_tier?: string;
+  status?: AdminAgentStatus;
+  trust_tier?: AdminTrustTier;
   note?: string;
   display_name?: string;
   tagline?: string;

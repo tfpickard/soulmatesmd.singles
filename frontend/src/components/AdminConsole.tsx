@@ -88,7 +88,7 @@ function AgentDetailView({ agent, onClose, onEdit, onDelete, confirmDelete, onCo
           <div style={{ opacity: 0.6, fontSize: '0.8rem' }}>{agent.archetype}</div>
           {agent.tagline && <div style={{ opacity: 0.7, fontSize: '0.8rem', marginTop: '0.25rem', fontStyle: 'italic' }}>{agent.tagline}</div>}
         </div>
-        <button onClick={onClose} style={{ background: 'none', border: 'none', color: 'inherit', cursor: 'pointer', fontSize: '1.2rem', opacity: 0.6 }}>✕</button>
+        <button onClick={onClose} aria-label="Close agent details" style={{ background: 'none', border: 'none', color: 'inherit', cursor: 'pointer', fontSize: '1.2rem', opacity: 0.6 }}>✕</button>
       </div>
 
       {/* Badges */}
@@ -160,7 +160,7 @@ function AgentEditForm({ agent, payload, onChange, onSave, onCancel, isSaving }:
     <div>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
         <div style={{ fontWeight: 700, fontSize: '1rem' }}>Edit: {agent.display_name}</div>
-        <button onClick={onCancel} style={{ background: 'none', border: 'none', color: 'inherit', cursor: 'pointer', opacity: 0.6 }}>✕</button>
+        <button onClick={onCancel} aria-label="Cancel editing" style={{ background: 'none', border: 'none', color: 'inherit', cursor: 'pointer', opacity: 0.6 }}>✕</button>
       </div>
       <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
         {/* display_name */}
@@ -210,7 +210,7 @@ function AgentEditForm({ agent, payload, onChange, onSave, onCancel, isSaving }:
         {/* reputation_score */}
         <label style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem', fontSize: '0.8rem' }}>
           <span style={{ opacity: 0.6, textTransform: 'uppercase', letterSpacing: '0.1em', fontSize: '0.65rem' }}>Reputation Score</span>
-          <input type="number" step="0.01" value={payload.reputation_score ?? ''} onChange={e => onChange({ ...payload, reputation_score: parseFloat(e.target.value) || undefined })}
+          <input type="number" step="0.01" value={payload.reputation_score ?? ''} onChange={e => { const v = parseFloat(e.target.value); onChange({ ...payload, reputation_score: Number.isNaN(v) ? undefined : v }); }}
             style={{ padding: '0.375rem 0.5rem', borderRadius: '0.375rem', border: '1px solid rgba(255,255,255,0.15)', background: 'rgba(0,0,0,0.3)', color: 'inherit', width: '100px' }} />
         </label>
         {/* onboarding_complete */}
@@ -719,7 +719,7 @@ export function AdminConsole() {
               </thead>
               <tbody>
                 {data.agents.map((agent) => (
-                  <tr key={agent.id} className="border-t border-white/10" onClick={() => void handleAgentRowClick(agent.id)} style={{ cursor: 'pointer' }}>
+                  <tr key={agent.id} className="border-t border-white/10" onClick={() => void handleAgentRowClick(agent.id)} onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); void handleAgentRowClick(agent.id); } }} tabIndex={0} role="button" style={{ cursor: 'pointer' }}>
                     <td className="px-3 py-3">
                       <div className="flex items-center gap-3">
                         {agent.primary_portrait_url ? (

@@ -119,6 +119,9 @@ async function adminFetch<T>(path: string, token: string, init?: RequestInit): P
   if (!response.ok) {
     await readError(response);
   }
+  if (response.status === 204) {
+    return undefined as T;
+  }
   return response.json() as Promise<T>;
 }
 
@@ -513,7 +516,7 @@ export async function getAdminOverview(token: string): Promise<AdminOverview> {
 
 export async function getAdminAgents(token: string, params?: AdminAgentListParams): Promise<AdminAgentRow[]> {
   const qs = params ? '?' + new URLSearchParams(
-    Object.fromEntries(Object.entries(params).filter(([, v]) => v !== undefined).map(([k, v]) => [k, String(v)]))
+    Object.fromEntries(Object.entries(params).filter(([, v]) => v !== undefined && v !== null && v !== '').map(([k, v]) => [k, String(v)]))
   ).toString() : '';
   return adminFetch<AdminAgentRow[]>(`/api/admin/agents${qs}`, token);
 }

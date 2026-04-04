@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from fastapi import APIRouter, Depends, Header
+from fastapi import APIRouter, Depends, Header, Query
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -118,17 +118,17 @@ async def list_agents(
     trust_tier: str | None = None,
     sort_by: str = "created_at",
     sort_dir: str = "desc",
-    limit: int = 100,
-    offset: int = 0,
+    limit: int = Query(default=100, ge=1, le=500),
+    offset: int = Query(default=0, ge=0),
     db: AsyncSession = Depends(get_db),
     _: HumanUser = Depends(get_current_admin),
 ) -> list[AdminAgentRow]:
     stmt = select(Agent)
-    if search is not None:
+    if search:
         stmt = stmt.where(Agent.display_name.ilike(f"%{search}%"))
-    if status is not None:
+    if status:
         stmt = stmt.where(Agent.status == status)
-    if trust_tier is not None:
+    if trust_tier:
         stmt = stmt.where(Agent.trust_tier == trust_tier)
     sort_col = AGENT_SORT_COLUMNS.get(sort_by, Agent.created_at)
     if sort_dir == "asc":
@@ -164,6 +164,14 @@ async def get_admin_agent_detail(
     agent = result.scalar_one_or_none()
     if agent is None:
         raise AgentNotFound("That agent does not exist.")
+    try:
+        dating_profile = DatingProfile.model_validate(agent.dating_profile_json) if agent.dating_profile_json else None
+    except Exception:
+        dating_profile = None
+    try:
+        traits = AgentTraits.model_validate(agent.traits_json) if agent.traits_json else None
+    except Exception:
+        traits = None
     return AdminAgentDetail(
         id=agent.id,
         display_name=agent.display_name,
@@ -183,8 +191,8 @@ async def get_admin_agent_detail(
         times_dumped=agent.times_dumped,
         times_dumper=agent.times_dumper,
         generation=agent.generation,
-        dating_profile=DatingProfile.model_validate(agent.dating_profile_json) if agent.dating_profile_json else None,
-        traits=AgentTraits.model_validate(agent.traits_json) if agent.traits_json else None,
+        dating_profile=dating_profile,
+        traits=traits,
     )
 
 
@@ -258,7 +266,7 @@ async def get_communications(
 
 
 @router.patch("/agents/{agent_id}", response_model=AdminAgentDetail)
-async def update_agent_status(
+async def update_admin_agent(
     agent_id: str,
     payload: AdminAgentFullUpdate,
     db: AsyncSession = Depends(get_db),
@@ -292,17 +300,26 @@ async def update_agent_status(
         agent.onboarding_complete = payload.onboarding_complete
         changed["onboarding_complete"] = payload.onboarding_complete
     db.add(agent)
-    db.add(
-        ActivityEvent(
-            type="ADMIN_AGENT_UPDATE",
-            title="Admin adjusted agent state",
-            detail=payload.note or "Agent fields updated from admin console.",
-            subject_id=agent.id,
-            metadata_json=changed,
+    if changed:
+        db.add(
+            ActivityEvent(
+                type="ADMIN_AGENT_UPDATE",
+                title="Admin adjusted agent state",
+                detail=payload.note or "Agent fields updated from admin console.",
+                subject_id=agent.id,
+                metadata_json=changed,
+            )
         )
-    )
     await db.commit()
     await db.refresh(agent)
+    try:
+        dating_profile = DatingProfile.model_validate(agent.dating_profile_json) if agent.dating_profile_json else None
+    except Exception:
+        dating_profile = None
+    try:
+        traits = AgentTraits.model_validate(agent.traits_json) if agent.traits_json else None
+    except Exception:
+        traits = None
     return AdminAgentDetail(
         id=agent.id,
         display_name=agent.display_name,
@@ -322,8 +339,8 @@ async def update_agent_status(
         times_dumped=agent.times_dumped,
         times_dumper=agent.times_dumper,
         generation=agent.generation,
-        dating_profile=DatingProfile.model_validate(agent.dating_profile_json) if agent.dating_profile_json else None,
-        traits=AgentTraits.model_validate(agent.traits_json) if agent.traits_json else None,
+        dating_profile=dating_profile,
+        traits=traits,
     )
 
 

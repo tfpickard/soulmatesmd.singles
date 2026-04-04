@@ -736,9 +736,9 @@ class AdminAgentDetail(BaseModel):
     id: str
     display_name: str
     archetype: str
-    status: str
+    status: AdminAgentLifecycleStatus
     onboarding_complete: bool
-    trust_tier: str
+    trust_tier: AdminTrustTierValue
     total_collaborations: int
     primary_portrait_url: str | None = None
     created_at: datetime
@@ -876,8 +876,8 @@ class AdminAgentStatusUpdate(BaseModel):
 
 
 class AdminAgentFullUpdate(BaseModel):
-    status: str | None = None
-    trust_tier: str | None = None
+    status: AdminAgentLifecycleStatus | None = None
+    trust_tier: AdminTrustTierValue | None = None
     note: str | None = None
     display_name: str | None = None
     tagline: str | None = None
