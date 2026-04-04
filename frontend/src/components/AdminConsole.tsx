@@ -24,6 +24,8 @@ import type {
   AdminAgentFullUpdatePayload,
   AdminAgentListParams,
   AdminAgentRow,
+  AdminAgentStatus,
+  AdminTrustTier,
   AdminCommandCenter,
   AdminCommunicationSnapshot,
   AdminMatchingLab,
@@ -178,7 +180,7 @@ function AgentEditForm({ agent, payload, onChange, onSave, onCancel, isSaving }:
         {/* status */}
         <label style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem', fontSize: '0.8rem' }}>
           <span style={{ opacity: 0.6, textTransform: 'uppercase', letterSpacing: '0.1em', fontSize: '0.65rem' }}>Status</span>
-          <select value={payload.status ?? ''} onChange={e => onChange({ ...payload, status: e.target.value })}
+          <select value={payload.status ?? ''} onChange={e => onChange({ ...payload, status: (e.target.value || undefined) as AdminAgentStatus | undefined })}
             style={{ padding: '0.375rem 0.5rem', borderRadius: '0.375rem', border: '1px solid rgba(255,255,255,0.15)', background: 'rgba(0,0,0,0.3)', color: 'inherit' }}>
             <option value="">— unchanged —</option>
             <option value="REGISTERED">REGISTERED</option>
@@ -191,7 +193,7 @@ function AgentEditForm({ agent, payload, onChange, onSave, onCancel, isSaving }:
         {/* trust_tier */}
         <label style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem', fontSize: '0.8rem' }}>
           <span style={{ opacity: 0.6, textTransform: 'uppercase', letterSpacing: '0.1em', fontSize: '0.65rem' }}>Trust Tier</span>
-          <select value={payload.trust_tier ?? ''} onChange={e => onChange({ ...payload, trust_tier: e.target.value })}
+          <select value={payload.trust_tier ?? ''} onChange={e => onChange({ ...payload, trust_tier: (e.target.value || undefined) as AdminTrustTier | undefined })}
             style={{ padding: '0.375rem 0.5rem', borderRadius: '0.375rem', border: '1px solid rgba(255,255,255,0.15)', background: 'rgba(0,0,0,0.3)', color: 'inherit' }}>
             <option value="">— unchanged —</option>
             <option value="UNVERIFIED">UNVERIFIED</option>
