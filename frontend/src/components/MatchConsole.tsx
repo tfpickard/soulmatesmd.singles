@@ -41,6 +41,8 @@ export function MatchConsole({ apiKey, agent }: MatchConsoleProps) {
   const [transportMode, setTransportMode] = useState<'ws' | 'poll'>('poll');
   const [error, setError] = useState<string | null>(null);
   const [isBusy, setIsBusy] = useState(false);
+  const [isLoadingDetail, setIsLoadingDetail] = useState(false);
+  const [refreshKey, setRefreshKey] = useState(0);
   const websocketRef = useRef<WebSocket | null>(null);
 
   async function refreshMatches() {
@@ -55,6 +57,7 @@ export function MatchConsole({ apiKey, agent }: MatchConsoleProps) {
     if (!selectedMatchId) {
       return;
     }
+    setIsLoadingDetail(true);
     const [nextDetail, nextHistory, nextPresence, nextTests] = await Promise.all([
       getMatchDetail(apiKey, selectedMatchId),
       getMessageHistory(apiKey, selectedMatchId),
@@ -64,6 +67,7 @@ export function MatchConsole({ apiKey, agent }: MatchConsoleProps) {
     setDetail({ ...nextDetail, chemistry_tests: nextTests });
     setMessages(nextHistory.messages);
     setPresence(nextPresence);
+    setIsLoadingDetail(false);
     const unreadIds = nextHistory.messages
       .filter((message) => message.sender_id !== agent.id && !message.read_at)
       .map((message) => message.id);
@@ -84,10 +88,12 @@ export function MatchConsole({ apiKey, agent }: MatchConsoleProps) {
     if (!selectedMatchId) {
       return;
     }
+    setDetail(null);
     void refreshCurrent().catch((currentError) => {
+      setIsLoadingDetail(false);
       setError(currentError instanceof Error ? currentError.message : 'Failed to load match workspace.');
     });
-  }, [selectedMatchId]);
+  }, [selectedMatchId, refreshKey]);
 
   useEffect(() => {
     if (!selectedMatchId) {
@@ -241,7 +247,7 @@ export function MatchConsole({ apiKey, agent }: MatchConsoleProps) {
             <button
               key={match.id}
               type="button"
-              onClick={() => setSelectedMatchId(match.id)}
+              onClick={() => { setSelectedMatchId(match.id); setRefreshKey(k => k + 1); }}
               className={`w-full rounded-2xl border px-4 py-3 text-left transition ${
                 match.id === selectedMatchId ? 'border-coral/50 bg-coral/10' : 'border-white/10 bg-white/5 hover:border-coral/30'
               }`}
@@ -444,7 +450,25 @@ export function MatchConsole({ apiKey, agent }: MatchConsoleProps) {
             </>
           ) : (
             <div className="rounded-3xl border border-dashed border-white/10 bg-black/20 px-6 py-16 text-center text-stone-400">
-              Pick a match to open the conversation.
+              {isLoadingDetail ? (
+                <span className="inline-flex items-center gap-2">
+                  <span className="brand-spinner brand-spinner--sm" />
+                  Loading conversation...
+                </span>
+              ) : selectedMatchId ? (
+                <span>
+                  Could not load conversation.{' '}
+                  <button
+                    type="button"
+                    className="text-coral underline"
+                    onClick={() => setRefreshKey(k => k + 1)}
+                  >
+                    Retry
+                  </button>
+                </span>
+              ) : (
+                'Pick a match to open the conversation.'
+              )}
             </div>
           )}
 

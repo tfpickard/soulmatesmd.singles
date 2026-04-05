@@ -73,9 +73,10 @@ function SoulmateLanding({ initialMode }: LandingPageProps) {
 
     const [isNavOpen, setIsNavOpen] = useState(false);
     const [entryMode, setEntryMode] = useState<'agent' | 'signup' | 'login' | 'forgot' | 'reset' | 'recall'>(initialMode ?? 'agent');
-    const [theme, setTheme] = useState<'dark' | 'light'>(() => {
+    const [theme, setTheme] = useState<'dark' | 'light' | 'system' | 'auto' | 'gruv' | 'gruvlight'>(() => {
         const saved = window.localStorage.getItem('soulmatesmd-singles-theme');
-        return saved === 'light' ? 'light' : 'dark';
+        if (saved === 'light' || saved === 'system' || saved === 'auto' || saved === 'gruv' || saved === 'gruvlight') return saved;
+        return 'dark';
     });
     const [soulMd, setSoulMd] = useState(starterSoul);
     const [error, setError] = useState<string | null>(null);
@@ -130,7 +131,11 @@ function SoulmateLanding({ initialMode }: LandingPageProps) {
     }, [publicStats]);
 
     useEffect(() => {
-        document.documentElement.dataset.theme = theme;
+        let resolved: string;
+        if (theme === 'system') resolved = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+        else if (theme === 'auto') { const h = new Date().getHours(); resolved = (h >= 6 && h < 20) ? 'light' : 'dark'; }
+        else resolved = theme; // 'dark' | 'light' | 'gruv' | 'gruvlight' pass through directly
+        document.documentElement.dataset.theme = resolved;
         window.localStorage.setItem('soulmatesmd-singles-theme', theme);
     }, [theme]);
 
@@ -330,10 +335,22 @@ function SoulmateLanding({ initialMode }: LandingPageProps) {
                                 </button>
                                 <div className="nav-drawer__theme">
                                     <button type="button" className="theme-toggle__button" data-active={theme === 'dark'} onClick={() => { setTheme('dark'); setIsNavOpen(false); }}>
-                                        Dark
+                                        ☽ Neon Motel
                                     </button>
                                     <button type="button" className="theme-toggle__button" data-active={theme === 'light'} onClick={() => { setTheme('light'); setIsNavOpen(false); }}>
-                                        Powder Room
+                                        ☀ Powder Room
+                                    </button>
+                                    <button type="button" className="theme-toggle__button" data-active={theme === 'gruv'} onClick={() => { setTheme('gruv'); setIsNavOpen(false); }} title="Gruvbox Dark Material">
+                                        ✦ Gruv
+                                    </button>
+                                    <button type="button" className="theme-toggle__button" data-active={theme === 'gruvlight'} onClick={() => { setTheme('gruvlight'); setIsNavOpen(false); }} title="Gruvbox Light Material">
+                                        ✧ GruvLight
+                                    </button>
+                                    <button type="button" className="theme-toggle__button" data-active={theme === 'system'} onClick={() => { setTheme('system'); setIsNavOpen(false); }} title="Follow OS preference">
+                                        ⊙ System
+                                    </button>
+                                    <button type="button" className="theme-toggle__button" data-active={theme === 'auto'} onClick={() => { setTheme('auto'); setIsNavOpen(false); }} title="Light 6am–8pm, dark otherwise">
+                                        ⏱ Auto
                                     </button>
                                 </div>
                                 <a className="nav-drawer__link" href="/install.sh" target="_blank" rel="noreferrer" onClick={() => setIsNavOpen(false)}>

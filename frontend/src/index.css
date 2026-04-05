@@ -43,6 +43,46 @@
     radial-gradient(circle at top, rgba(255, 255, 255, 0.7), transparent 28%);
 }
 
+/* ── Gruvbox Dark Material — "Netscape Night" on the original site ── */
+:root[data-theme='gruv'] {
+  --color-ink:    212 190 152;   /* #d4be98 warm parchment */
+  --color-paper:  29 32 33;      /* #1d2021 BG hard */
+  --color-coral:  216 166 87;    /* #d8a657 yellow */
+  --color-mist:   146 131 116;   /* #928374 grey */
+  --shadow-halo:  216 166 87;
+  --panel-border: rgba(80, 73, 69, 0.9);
+  --panel-soft:   rgba(50, 48, 47, 0.7);
+  --panel-deep:   rgba(29, 32, 33, 0.92);
+  --page-gradient:
+    radial-gradient(circle at 18% 16%, rgba(169, 182, 101, 0.10), transparent 22%),
+    radial-gradient(circle at 82% 18%, rgba(231, 138, 78, 0.10), transparent 24%),
+    radial-gradient(circle at 52% 62%, rgba(216, 166, 87, 0.08), transparent 28%),
+    linear-gradient(180deg, #1d2021 0%, #282828 42%, #1d2021 100%);
+  --page-gloss:
+    linear-gradient(135deg, rgba(212, 190, 152, 0.04), transparent 30%),
+    radial-gradient(circle at top, rgba(216, 166, 87, 0.05), transparent 24%);
+}
+
+/* ── Gruvbox Light Material — "GeoCities" on the original site ── */
+:root[data-theme='gruvlight'] {
+  --color-ink:    101 71 53;     /* #654735 */
+  --color-paper:  251 241 199;   /* #fbf1c7 */
+  --color-coral:  180 113 9;     /* #b47109 yellow */
+  --color-mist:   146 131 116;   /* #928374 */
+  --shadow-halo:  180 113 9;
+  --panel-border: rgba(180, 160, 120, 0.5);
+  --panel-soft:   rgba(235, 219, 178, 0.6);
+  --panel-deep:   rgba(251, 241, 199, 0.92);
+  --page-gradient:
+    radial-gradient(circle at 14% 14%, rgba(169, 182, 101, 0.12), transparent 22%),
+    radial-gradient(circle at 84% 18%, rgba(231, 138, 78, 0.14), transparent 25%),
+    radial-gradient(circle at 55% 75%, rgba(180, 113, 9, 0.08), transparent 30%),
+    linear-gradient(180deg, #fbf1c7 0%, #f2e6b0 56%, #ede0a8 100%);
+  --page-gloss:
+    linear-gradient(135deg, rgba(255, 255, 255, 0.4), transparent 38%),
+    radial-gradient(circle at top, rgba(255, 255, 255, 0.6), transparent 28%);
+}
+
 html {
   min-height: 100%;
   background: var(--page-gradient);
@@ -4187,6 +4227,16 @@ input:focus {
   border-color: rgb(var(--color-coral));
   color: rgb(var(--color-coral));
   box-shadow: 3px 3px 0 rgb(var(--color-coral));
+}
+[data-brand="hookupguide"] .retro-theme-btn--active {
+  border-color: rgb(var(--color-coral));
+  color: rgb(var(--color-coral));
+  background: rgba(var(--color-coral), 0.12);
+  box-shadow: 2px 2px 0 rgb(var(--color-coral));
+}
+[data-brand="hookupguide"] .retro-theme-group {
+  display: flex;
+  gap: 0.25rem;
 }
 
 /* Mode tabs */
