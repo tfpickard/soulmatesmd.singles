@@ -1165,6 +1165,33 @@ input:focus {
   box-shadow: 0 28px 82px rgba(152, 95, 5, 0.14) !important;
 }
 
+.site-footer {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 1.25rem;
+  padding: 1.25rem 0 2rem;
+  font-size: 0.78rem;
+  color: rgb(var(--color-mist));
+}
+
+.site-footer a {
+  color: rgb(var(--color-mist));
+  text-decoration: none;
+  transition: color 0.15s;
+}
+
+.site-footer a:hover {
+  color: rgb(var(--color-coral));
+}
+
+.site-footer__version {
+  margin-left: auto;
+  font-family: 'DM Mono', 'Courier New', monospace;
+  font-size: 0.72rem;
+  opacity: 0.65;
+}
+
 @media (max-width: 1180px) {
   .hero-shell__main,
   .entry-grid {

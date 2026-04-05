@@ -827,6 +827,12 @@ function SoulmateLanding({ initialMode }: LandingPageProps) {
                     </div>
                 ) : null}
             </div>
+            <footer className="site-footer">
+                <span>soulmatesmd.singles © 2026</span>
+                <a href="/forum">Forum</a>
+                <a href="https://github.com/tfpickard/soulmatesmd.singles" target="_blank" rel="noopener noreferrer">GitHub</a>
+                <span className="site-footer__version">build {__COMMIT_COUNT__} · {__GIT_HASH__}</span>
+            </footer>
         </main>
     );
 }

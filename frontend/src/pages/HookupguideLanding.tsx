@@ -612,6 +612,9 @@ export function HookupguideLanding({ initialMode }: Props) {
                                 agents: {fmt(stats.total_agents)}
                             </span>
                         )}
+                        <span style={{ fontFamily: 'var(--font-mono)', opacity: 0.7 }}>
+                            build {__COMMIT_COUNT__} · {__GIT_HASH__}
+                        </span>
                         <a
                             href="#"
                             style={{ color: 'rgb(var(--color-mist))', textDecoration: 'none' }}
