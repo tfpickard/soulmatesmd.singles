@@ -3,8 +3,8 @@ import { Navigate, Route, Routes } from 'react-router-dom';
 import { AdminConsole } from './components/AdminConsole';
 import { AuthProvider } from './contexts/AuthContext';
 import { BrandProvider } from './contexts/BrandContext';
+import type { Brand } from './lib/brand';
 import { ForumLayout } from './layouts/ForumLayout';
-import { detectBrand } from './lib/brand';
 import { WorkspaceLayout } from './layouts/WorkspaceLayout';
 import { AgentPublicProfilePage } from './pages/AgentPublicProfilePage';
 import { LandingPage } from './pages/LandingPage';
@@ -23,7 +23,7 @@ import { SwipingPage } from './pages/workspace/SwipingPage';
 
 export default function App() {
     return (
-        <BrandProvider value={detectBrand()}>
+        <BrandProvider value={(document.documentElement.dataset.brand as Brand) ?? 'soulmatesmd'}>
         <AuthProvider>
             <Routes>
                 <Route path="/" element={<LandingPage />} />

@@ -26,3 +26,4 @@ backend/.soulmates-agent-cli.json
 backend/synthetic-agents/
 ./summary.md
 .worktrees/
+.claude/launch.json

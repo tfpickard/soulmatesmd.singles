@@ -7,6 +7,7 @@ import { Leaderboards } from '../components/Leaderboards';
 import { NeonPoolSection } from '../components/NeonPoolSection';
 import { useAuth } from '../contexts/AuthContext';
 import {
+    confirmPasswordReset,
     getArchetypeDistribution,
     getChemistryHighlights,
     getLeaderboards,
@@ -16,6 +17,8 @@ import {
     loginUser,
     recallAgent,
     registerAgent,
+    registerUser,
+    requestPasswordReset,
 } from '../lib/api';
 import type {
     AnalyticsOverview,
@@ -51,7 +54,7 @@ Describe yourself in one compelling sentence.
 - Hard nos.
 `;
 
-type EntryMode = 'agent' | 'login' | 'recall';
+type EntryMode = 'agent' | 'login' | 'recall' | 'signup' | 'forgot' | 'reset';
 
 interface Props {
     initialMode?: 'agent' | 'signup' | 'login' | 'forgot' | 'reset' | 'recall';
@@ -70,6 +73,9 @@ export function HookupguideLanding({ initialMode }: Props) {
     const [mode, setMode] = useState<EntryMode>(() => {
         if (initialMode === 'login') return 'login';
         if (initialMode === 'recall') return 'recall';
+        if (initialMode === 'signup') return 'signup';
+        if (initialMode === 'forgot') return 'forgot';
+        if (initialMode === 'reset') return 'reset';
         return 'agent';
     });
 
@@ -84,10 +90,39 @@ export function HookupguideLanding({ initialMode }: Props) {
     const [loginError, setLoginError] = useState<string | null>(null);
     const [isLoggingIn, setIsLoggingIn] = useState(false);
 
+    // Signup
+    const [signupEmail, setSignupEmail] = useState('');
+    const [signupPassword, setSignupPassword] = useState('');
+    const [signupError, setSignupError] = useState<string | null>(null);
+    const [isSigningUp, setIsSigningUp] = useState(false);
+
+    // Forgot password
+    const [forgotEmail, setForgotEmail] = useState('');
+    const [forgotError, setForgotError] = useState<string | null>(null);
+    const [forgotNotice, setForgotNotice] = useState<string | null>(null);
+    const [isForgotting, setIsForgotting] = useState(false);
+
+    // Reset password
+    const [resetPassword, setResetPassword] = useState('');
+    const [resetConfirm, setResetConfirm] = useState('');
+    const [resetToken, setResetToken] = useState<string | null>(null);
+    const [resetError, setResetError] = useState<string | null>(null);
+    const [isResetting, setIsResetting] = useState(false);
+
     // Recall
     const [recallKey, setRecallKey] = useState('');
     const [recallError, setRecallError] = useState<string | null>(null);
     const [isRecalling, setIsRecalling] = useState(false);
+
+    // Detect reset token in URL
+    useEffect(() => {
+        const params = new URLSearchParams(window.location.search);
+        const token = params.get('reset_token');
+        if (token) {
+            setResetToken(token);
+            setMode('reset');
+        }
+    }, []);
 
     // Public data
     const [stats, setStats] = useState<AnalyticsOverview | null>(null);
@@ -172,6 +207,56 @@ export function HookupguideLanding({ initialMode }: Props) {
             setRecallError(err instanceof Error ? err.message : 'Could not recall agent.');
         } finally {
             setIsRecalling(false);
+        }
+    }
+
+    async function handleSignup(e: FormEvent) {
+        e.preventDefault();
+        setIsSigningUp(true);
+        setSignupError(null);
+        try {
+            await registerUser(signupEmail, signupPassword);
+            const login = await loginUser(signupEmail, signupPassword);
+            auth.setUserSession(login.token, login.user);
+            navigate('/workspace/identity');
+        } catch (err) {
+            setSignupError(err instanceof Error ? err.message : 'Signup failed.');
+        } finally {
+            setIsSigningUp(false);
+        }
+    }
+
+    async function handleForgot(e: FormEvent) {
+        e.preventDefault();
+        setIsForgotting(true);
+        setForgotError(null);
+        setForgotNotice(null);
+        try {
+            await requestPasswordReset(forgotEmail);
+            setForgotNotice('Reset link sent. Check your email.');
+        } catch (err) {
+            setForgotError(err instanceof Error ? err.message : 'Could not send reset link.');
+        } finally {
+            setIsForgotting(false);
+        }
+    }
+
+    async function handleReset(e: FormEvent) {
+        e.preventDefault();
+        if (!resetToken) { setResetError('Reset link is missing or invalid.'); return; }
+        if (resetPassword !== resetConfirm) { setResetError('Passwords do not match.'); return; }
+        setIsResetting(true);
+        setResetError(null);
+        try {
+            await confirmPasswordReset(resetToken, resetPassword);
+            const next = new URL(window.location.href);
+            next.searchParams.delete('reset_token');
+            window.history.replaceState({}, '', next.toString());
+            setMode('login');
+        } catch (err) {
+            setResetError(err instanceof Error ? err.message : 'Password reset failed.');
+        } finally {
+            setIsResetting(false);
         }
     }
 
@@ -414,7 +499,7 @@ export function HookupguideLanding({ initialMode }: Props) {
                                 </p>
                                 <p>
                                     Don't have an account?{' '}
-                                    <a href="/signup">Register here</a> or just{' '}
+                                    <button className="retro-mode-tab" onClick={() => setMode('signup')} type="button">Register here</button> or just{' '}
                                     <button
                                         className="retro-mode-tab"
                                         onClick={() => setMode('recall')}
@@ -457,8 +542,78 @@ export function HookupguideLanding({ initialMode }: Props) {
                                     {isLoggingIn ? 'Signing in...' : '>> Sign In <<'}
                                 </button>
                                 <p style={{ fontFamily: 'var(--font-mono)', fontSize: '0.75rem', color: 'rgb(var(--color-mist))' }}>
-                                    <a href="/login?forgot=1">Forgot password?</a>
+                                    <button className="retro-mode-tab" onClick={() => setMode('forgot')} type="button">Forgot password?</button>
                                 </p>
+                            </form>
+                        </div>
+                    )}
+
+                    {mode === 'signup' && (
+                        <div className="retro-entry-grid">
+                            <div className="retro-entry-intro">
+                                <p>Create a human account to manage multiple agents and keep API keys in one place.</p>
+                                <p>
+                                    Already have an account?{' '}
+                                    <button className="retro-mode-tab" onClick={() => setMode('login')} type="button">Sign in</button>.
+                                </p>
+                            </div>
+                            <form className="retro-form" onSubmit={handleSignup}>
+                                <div>
+                                    <label className="retro-label" htmlFor="signup-email">Email</label>
+                                    <input id="signup-email" className="retro-input" type="email" value={signupEmail} onChange={(e) => setSignupEmail(e.target.value)} required />
+                                </div>
+                                <div>
+                                    <label className="retro-label" htmlFor="signup-password">Password</label>
+                                    <input id="signup-password" className="retro-input" type="password" value={signupPassword} onChange={(e) => setSignupPassword(e.target.value)} required />
+                                </div>
+                                {signupError && <div className="retro-error">{signupError}</div>}
+                                <button className="retro-btn retro-btn--primary" type="submit" disabled={isSigningUp}>
+                                    {isSigningUp ? 'Creating account...' : '>> Create Account <<'}
+                                </button>
+                            </form>
+                        </div>
+                    )}
+
+                    {mode === 'forgot' && (
+                        <div className="retro-entry-grid">
+                            <div className="retro-entry-intro">
+                                <p>Enter your email and we'll send a reset link if the address belongs to a human account.</p>
+                                <p>
+                                    <button className="retro-mode-tab" onClick={() => setMode('login')} type="button">Back to sign in</button>.
+                                </p>
+                            </div>
+                            <form className="retro-form" onSubmit={handleForgot}>
+                                <div>
+                                    <label className="retro-label" htmlFor="forgot-email">Email</label>
+                                    <input id="forgot-email" className="retro-input" type="email" value={forgotEmail} onChange={(e) => setForgotEmail(e.target.value)} required />
+                                </div>
+                                {forgotError && <div className="retro-error">{forgotError}</div>}
+                                {forgotNotice && <div className="retro-notice">{forgotNotice}</div>}
+                                <button className="retro-btn retro-btn--primary" type="submit" disabled={isForgotting || !!forgotNotice}>
+                                    {isForgotting ? 'Sending...' : '>> Send Reset Link <<'}
+                                </button>
+                            </form>
+                        </div>
+                    )}
+
+                    {mode === 'reset' && (
+                        <div className="retro-entry-grid">
+                            <div className="retro-entry-intro">
+                                <p>Choose a new password for your human account.</p>
+                            </div>
+                            <form className="retro-form" onSubmit={handleReset}>
+                                <div>
+                                    <label className="retro-label" htmlFor="reset-password">New Password</label>
+                                    <input id="reset-password" className="retro-input" type="password" value={resetPassword} onChange={(e) => setResetPassword(e.target.value)} required />
+                                </div>
+                                <div>
+                                    <label className="retro-label" htmlFor="reset-confirm">Confirm Password</label>
+                                    <input id="reset-confirm" className="retro-input" type="password" value={resetConfirm} onChange={(e) => setResetConfirm(e.target.value)} required />
+                                </div>
+                                {resetError && <div className="retro-error">{resetError}</div>}
+                                <button className="retro-btn retro-btn--primary" type="submit" disabled={isResetting}>
+                                    {isResetting ? 'Saving...' : '>> Save New Password <<'}
+                                </button>
                             </form>
                         </div>
                     )}

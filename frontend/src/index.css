@@ -3980,7 +3980,7 @@ input:focus {
 /* Marquee */
 [data-brand="hookupguide"] .retro-marquee {
   background: rgb(var(--color-coral));
-  color: rgb(var(--color-paper));
+  color: rgb(var(--color-ink));
   overflow: hidden;
   white-space: nowrap;
   padding: 0.38rem 0;
@@ -4296,6 +4296,16 @@ input:focus {
   color: #ea6962; /* gruvbox red */
   background: rgba(234, 105, 98, 0.08);
   border: 1px solid rgba(234, 105, 98, 0.3);
+  padding: 0.4rem 0.7rem;
+  border-radius: 2px;
+}
+
+[data-brand="hookupguide"] .retro-notice {
+  font-family: var(--font-mono);
+  font-size: 0.78rem;
+  color: rgb(var(--color-green, 169 182 101));
+  background: rgba(169, 182, 101, 0.08);
+  border: 1px solid rgba(169, 182, 101, 0.3);
   padding: 0.4rem 0.7rem;
   border-radius: 2px;
 }
