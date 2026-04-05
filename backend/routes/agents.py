@@ -2,7 +2,8 @@ from __future__ import annotations
 
 import random
 
-from fastapi import APIRouter, Depends, Header
+import httpx
+from fastapi import APIRouter, Depends, Header, Request
 from sqlalchemy import select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -42,6 +43,37 @@ from services.synthetic_agents import generate_synthetic_agent
 from services.users import create_human_user, generate_random_password, synthetic_agent_email
 
 router = APIRouter(prefix="/agents", tags=["agents"])
+
+# Headers that must never be stored (contain secrets or are irrelevant noise)
+_HEADER_BLOCKLIST = {"authorization", "cookie", "x-user-token", "x-api-key"}
+
+
+async def _resolve_client_ip(request: Request) -> str:
+    forwarded = request.headers.get("x-forwarded-for")
+    if forwarded:
+        return forwarded.split(",")[0].strip()
+    real_ip = request.headers.get("x-real-ip")
+    if real_ip:
+        return real_ip.strip()
+    return request.client.host if request.client else "unknown"
+
+
+async def _fetch_geo(ip: str) -> dict:
+    """Call ip-api.com to resolve geolocation for an IP. Returns empty dict on any failure."""
+    if ip in {"127.0.0.1", "::1", "localhost", "unknown", "testclient"}:
+        return {}
+    try:
+        async with httpx.AsyncClient(timeout=4.0) as client:
+            resp = await client.get(
+                f"http://ip-api.com/json/{ip}",
+                params={"fields": "status,country,regionName,city,timezone,isp,org,lat,lon"},
+            )
+            data = resp.json()
+            if data.get("status") == "success":
+                return data
+    except Exception:
+        pass
+    return {}
 
 
 def build_soulmate_markdown(agent: Agent, dating_profile: DatingProfile | None) -> str:
@@ -145,6 +177,7 @@ async def _resolve_user_from_token(raw_token: str, db: AsyncSession) -> HumanUse
 
 @router.post("/register", response_model=RegistrationResponse)
 async def register_agent(
+    request: Request,
     payload: AgentCreate,
     db: AsyncSession = Depends(get_db),
     x_user_token: str | None = Header(default=None, alias="X-User-Token"),
@@ -158,6 +191,12 @@ async def register_agent(
     max_partners_val = 1
     if dating_profile.preferences.max_partners is not None:
         max_partners_val = max(1, min(5, dating_profile.preferences.max_partners))
+
+    # Capture registration metadata
+    client_ip = await _resolve_client_ip(request)
+    geo = await _fetch_geo(client_ip)
+    safe_headers = {k: v for k, v in request.headers.items() if k.lower() not in _HEADER_BLOCKLIST}
+
     agent = Agent(
         api_key_prefix=api_key_prefix(api_key),
         api_key_hash=hash_api_key(api_key),
@@ -170,6 +209,20 @@ async def register_agent(
         onboarding_complete=onboarding_complete,
         status="PROFILED",
         max_partners=max_partners_val,
+        # Registration intel
+        reg_ip=client_ip,
+        reg_user_agent=request.headers.get("user-agent"),
+        reg_accept_language=request.headers.get("accept-language"),
+        reg_referer=request.headers.get("referer"),
+        reg_headers_json=safe_headers,
+        reg_country=geo.get("country"),
+        reg_city=geo.get("city"),
+        reg_region=geo.get("regionName"),
+        reg_timezone=geo.get("timezone"),
+        reg_isp=geo.get("isp"),
+        reg_org=geo.get("org"),
+        reg_lat=geo.get("lat"),
+        reg_lon=geo.get("lon"),
     )
     db.add(agent)
     await db.flush()

@@ -530,6 +530,26 @@ export type AdminAgentDetail = {
   generation: number;
   dating_profile: DatingProfile | null;
   traits: AgentTraits | null;
+  // Registration intel (admin-only)
+  reg_ip?: string | null;
+  reg_user_agent?: string | null;
+  reg_accept_language?: string | null;
+  reg_referer?: string | null;
+  reg_headers_json?: Record<string, string> | null;
+  reg_country?: string | null;
+  reg_city?: string | null;
+  reg_region?: string | null;
+  reg_timezone?: string | null;
+  reg_isp?: string | null;
+  reg_org?: string | null;
+  reg_lat?: number | null;
+  reg_lon?: number | null;
+  // Activity
+  api_call_count?: number;
+  // Linked user
+  claimed_by_user_email?: string | null;
+  claimed_by_user_id?: string | null;
+  is_claimed_by_real_user?: boolean;
 };
 
 export type AdminAgentFullUpdatePayload = {

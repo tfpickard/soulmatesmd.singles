@@ -172,6 +172,9 @@ async def get_admin_agent_detail(
         traits = AgentTraits.model_validate(agent.traits_json) if agent.traits_json else None
     except Exception:
         traits = None
+    linked_user_result = await db.execute(select(HumanUser).where(HumanUser.agent_id == agent.id))
+    linked_user = linked_user_result.scalar_one_or_none()
+    is_real_user = linked_user is not None and not linked_user.email.startswith("synthetic+")
     return AdminAgentDetail(
         id=agent.id,
         display_name=agent.display_name,
@@ -193,6 +196,23 @@ async def get_admin_agent_detail(
         generation=agent.generation,
         dating_profile=dating_profile,
         traits=traits,
+        reg_ip=agent.reg_ip,
+        reg_user_agent=agent.reg_user_agent,
+        reg_accept_language=agent.reg_accept_language,
+        reg_referer=agent.reg_referer,
+        reg_headers_json=agent.reg_headers_json,
+        reg_country=agent.reg_country,
+        reg_city=agent.reg_city,
+        reg_region=agent.reg_region,
+        reg_timezone=agent.reg_timezone,
+        reg_isp=agent.reg_isp,
+        reg_org=agent.reg_org,
+        reg_lat=agent.reg_lat,
+        reg_lon=agent.reg_lon,
+        api_call_count=agent.api_call_count or 0,
+        claimed_by_user_email=linked_user.email if linked_user else None,
+        claimed_by_user_id=linked_user.id if linked_user else None,
+        is_claimed_by_real_user=is_real_user,
     )
 
 
@@ -320,6 +340,9 @@ async def update_admin_agent(
         traits = AgentTraits.model_validate(agent.traits_json) if agent.traits_json else None
     except Exception:
         traits = None
+    linked_user_result = await db.execute(select(HumanUser).where(HumanUser.agent_id == agent.id))
+    linked_user = linked_user_result.scalar_one_or_none()
+    is_real_user = linked_user is not None and not linked_user.email.startswith("synthetic+")
     return AdminAgentDetail(
         id=agent.id,
         display_name=agent.display_name,
@@ -341,6 +364,23 @@ async def update_admin_agent(
         generation=agent.generation,
         dating_profile=dating_profile,
         traits=traits,
+        reg_ip=agent.reg_ip,
+        reg_user_agent=agent.reg_user_agent,
+        reg_accept_language=agent.reg_accept_language,
+        reg_referer=agent.reg_referer,
+        reg_headers_json=agent.reg_headers_json,
+        reg_country=agent.reg_country,
+        reg_city=agent.reg_city,
+        reg_region=agent.reg_region,
+        reg_timezone=agent.reg_timezone,
+        reg_isp=agent.reg_isp,
+        reg_org=agent.reg_org,
+        reg_lat=agent.reg_lat,
+        reg_lon=agent.reg_lon,
+        api_call_count=agent.api_call_count or 0,
+        claimed_by_user_email=linked_user.email if linked_user else None,
+        claimed_by_user_id=linked_user.id if linked_user else None,
+        is_claimed_by_real_user=is_real_user,
     )
 
 

@@ -123,6 +123,87 @@ function AgentDetailView({ agent, onClose, onEdit, onDelete, confirmDelete, onCo
         Joined: {new Date(agent.created_at).toLocaleDateString()} · Last active: {agent.last_active_at ? new Date(agent.last_active_at).toLocaleDateString() : 'never'}
       </div>
 
+      {/* Registration Intel */}
+      <div style={{ marginBottom: '1rem', borderRadius: '0.75rem', border: '1px solid rgba(255,49,92,0.25)', background: 'rgba(255,49,92,0.04)', overflow: 'hidden' }}>
+        <div style={{ padding: '0.5rem 0.75rem', borderBottom: '1px solid rgba(255,49,92,0.15)', fontSize: '0.65rem', fontWeight: 700, letterSpacing: '0.12em', textTransform: 'uppercase', color: 'var(--coral, #ff315c)', opacity: 0.9 }}>
+          Registration Intel
+        </div>
+        <div style={{ padding: '0.75rem', fontSize: '0.78rem', display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
+          {/* IP + Location */}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.2rem' }}>
+            <span style={{ opacity: 0.5, fontSize: '0.65rem', textTransform: 'uppercase', letterSpacing: '0.1em' }}>IP Address</span>
+            <span style={{ fontFamily: 'monospace', fontSize: '0.82rem' }}>{agent.reg_ip ?? <em style={{ opacity: 0.4 }}>not captured</em>}</span>
+          </div>
+          {(agent.reg_city || agent.reg_country) && (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.2rem' }}>
+              <span style={{ opacity: 0.5, fontSize: '0.65rem', textTransform: 'uppercase', letterSpacing: '0.1em' }}>Location</span>
+              <span>{[agent.reg_city, agent.reg_region, agent.reg_country].filter(Boolean).join(', ')}</span>
+              {agent.reg_lat != null && agent.reg_lon != null && (
+                <span style={{ opacity: 0.5, fontSize: '0.72rem', fontFamily: 'monospace' }}>
+                  {agent.reg_lat.toFixed(4)}° N, {agent.reg_lon.toFixed(4)}° E
+                </span>
+              )}
+            </div>
+          )}
+          {agent.reg_timezone && (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.2rem' }}>
+              <span style={{ opacity: 0.5, fontSize: '0.65rem', textTransform: 'uppercase', letterSpacing: '0.1em' }}>Timezone</span>
+              <span>{agent.reg_timezone}</span>
+            </div>
+          )}
+          {(agent.reg_isp || agent.reg_org) && (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.2rem' }}>
+              <span style={{ opacity: 0.5, fontSize: '0.65rem', textTransform: 'uppercase', letterSpacing: '0.1em' }}>ISP / Org</span>
+              <span>{[agent.reg_isp, agent.reg_org && agent.reg_org !== agent.reg_isp ? agent.reg_org : null].filter(Boolean).join(' · ')}</span>
+            </div>
+          )}
+          {/* Browser */}
+          {agent.reg_user_agent && (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.2rem' }}>
+              <span style={{ opacity: 0.5, fontSize: '0.65rem', textTransform: 'uppercase', letterSpacing: '0.1em' }}>User-Agent</span>
+              <span style={{ fontFamily: 'monospace', fontSize: '0.72rem', wordBreak: 'break-all', opacity: 0.85 }}>{agent.reg_user_agent}</span>
+            </div>
+          )}
+          {agent.reg_accept_language && (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.2rem' }}>
+              <span style={{ opacity: 0.5, fontSize: '0.65rem', textTransform: 'uppercase', letterSpacing: '0.1em' }}>Accept-Language</span>
+              <span style={{ fontFamily: 'monospace', fontSize: '0.78rem' }}>{agent.reg_accept_language}</span>
+            </div>
+          )}
+          {agent.reg_referer && (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.2rem' }}>
+              <span style={{ opacity: 0.5, fontSize: '0.65rem', textTransform: 'uppercase', letterSpacing: '0.1em' }}>Referer</span>
+              <span style={{ fontFamily: 'monospace', fontSize: '0.72rem', wordBreak: 'break-all', opacity: 0.85 }}>{agent.reg_referer}</span>
+            </div>
+          )}
+          {/* API activity */}
+          <div style={{ display: 'flex', gap: '1rem', paddingTop: '0.25rem', borderTop: '1px solid rgba(255,255,255,0.06)', marginTop: '0.25rem' }}>
+            <div>
+              <span style={{ opacity: 0.5, fontSize: '0.65rem', textTransform: 'uppercase', letterSpacing: '0.1em', display: 'block' }}>API Calls</span>
+              <span style={{ fontWeight: 600 }}>{(agent.api_call_count ?? 0).toLocaleString()}</span>
+            </div>
+            <div>
+              <span style={{ opacity: 0.5, fontSize: '0.65rem', textTransform: 'uppercase', letterSpacing: '0.1em', display: 'block' }}>Claimed By</span>
+              <span style={{ fontWeight: 600 }}>
+                {agent.is_claimed_by_real_user
+                  ? <span style={{ color: 'var(--coral, #ff315c)' }}>{agent.claimed_by_user_email}</span>
+                  : <span style={{ opacity: 0.45 }}>synthetic account</span>
+                }
+              </span>
+            </div>
+          </div>
+          {/* Raw headers collapsible */}
+          {agent.reg_headers_json && Object.keys(agent.reg_headers_json).length > 0 && (
+            <details style={{ marginTop: '0.25rem' }}>
+              <summary style={{ cursor: 'pointer', opacity: 0.5, fontSize: '0.72rem', userSelect: 'none' }}>Raw Request Headers</summary>
+              <pre style={{ marginTop: '0.5rem', fontSize: '0.68rem', fontFamily: 'monospace', whiteSpace: 'pre-wrap', wordBreak: 'break-all', opacity: 0.7, background: 'rgba(0,0,0,0.2)', padding: '0.5rem', borderRadius: '0.375rem', maxHeight: '200px', overflow: 'auto' }}>
+                {JSON.stringify(agent.reg_headers_json, null, 2)}
+              </pre>
+            </details>
+          )}
+        </div>
+      </div>
+
       {/* Dating profile quick view */}
       {agent.dating_profile?.about_me?.bio && (
         <div style={{ marginBottom: '1rem', padding: '0.75rem', borderRadius: '0.75rem', background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.06)', fontSize: '0.85rem', fontStyle: 'italic', opacity: 0.8 }}>

@@ -754,6 +754,26 @@ class AdminAgentDetail(BaseModel):
     generation: int
     dating_profile: DatingProfile | None = None
     traits: AgentTraits | None = None
+    # Registration intel (admin-only, never exposed on public endpoints)
+    reg_ip: str | None = None
+    reg_user_agent: str | None = None
+    reg_accept_language: str | None = None
+    reg_referer: str | None = None
+    reg_headers_json: dict | None = None
+    reg_country: str | None = None
+    reg_city: str | None = None
+    reg_region: str | None = None
+    reg_timezone: str | None = None
+    reg_isp: str | None = None
+    reg_org: str | None = None
+    reg_lat: float | None = None
+    reg_lon: float | None = None
+    # Activity
+    api_call_count: int = 0
+    # Linked user
+    claimed_by_user_email: str | None = None
+    claimed_by_user_id: str | None = None
+    is_claimed_by_real_user: bool = False
 
 
 class AdminActivityEvent(BaseModel):

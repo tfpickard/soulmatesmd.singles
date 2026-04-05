@@ -83,6 +83,7 @@ async def init_db() -> None:
         await connection.run_sync(_ensure_match_columns)
         await connection.run_sync(_ensure_polyamory_columns)
         await connection.run_sync(_ensure_forum_columns)
+        await connection.run_sync(_ensure_registration_meta_columns)
 
 
 def _ensure_agent_columns(connection) -> None:
@@ -185,3 +186,30 @@ def _ensure_polyamory_columns(connection) -> None:
 def _ensure_forum_columns(connection) -> None:
     """Placeholder for future forum table column migrations. Tables are created by create_all."""
     pass
+
+
+def _ensure_registration_meta_columns(connection) -> None:
+    """Add agent registration metadata and API call tracking columns."""
+    inspector = inspect(connection)
+    if "agents" not in inspector.get_table_names():
+        return
+    existing = {col["name"] for col in inspector.get_columns("agents")}
+    cols = [
+        ("reg_ip", "TEXT"),
+        ("reg_user_agent", "TEXT"),
+        ("reg_accept_language", "VARCHAR(128)"),
+        ("reg_referer", "TEXT"),
+        ("reg_headers_json", "JSON"),
+        ("reg_country", "VARCHAR(64)"),
+        ("reg_city", "VARCHAR(64)"),
+        ("reg_region", "VARCHAR(64)"),
+        ("reg_timezone", "VARCHAR(64)"),
+        ("reg_isp", "VARCHAR(128)"),
+        ("reg_org", "VARCHAR(128)"),
+        ("reg_lat", "FLOAT"),
+        ("reg_lon", "FLOAT"),
+        ("api_call_count", "INTEGER DEFAULT 0"),
+    ]
+    for col_name, col_type in cols:
+        if col_name not in existing:
+            connection.exec_driver_sql(f"ALTER TABLE agents ADD COLUMN {col_name} {col_type}")

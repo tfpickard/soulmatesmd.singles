@@ -7,7 +7,7 @@ from datetime import timedelta
 
 import bcrypt
 from fastapi import Depends, Header
-from sqlalchemy import and_, select
+from sqlalchemy import and_, select, update as sa_update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from config import settings
@@ -91,6 +91,12 @@ async def get_current_agent(
         agents = fallback_result.scalars().all()
     for agent in agents:
         if verify_api_key(raw_key, agent.api_key_hash):
+            await db.execute(
+                sa_update(Agent)
+                .where(Agent.id == agent.id)
+                .values(api_call_count=Agent.api_call_count + 1)
+            )
+            await db.commit()
             return agent
 
     raise AuthenticationError()

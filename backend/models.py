@@ -43,6 +43,22 @@ class Agent(Base):
     times_dumper: Mapped[int] = mapped_column(Integer, default=0)
     rebound_boost_until: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     generation: Mapped[int] = mapped_column(Integer, default=0)
+    # Registration metadata — admin-only, never exposed publicly
+    reg_ip: Mapped[str | None] = mapped_column(Text, nullable=True)
+    reg_user_agent: Mapped[str | None] = mapped_column(Text, nullable=True)
+    reg_accept_language: Mapped[str | None] = mapped_column(String(128), nullable=True)
+    reg_referer: Mapped[str | None] = mapped_column(Text, nullable=True)
+    reg_headers_json: Mapped[dict | None] = mapped_column(JSON, nullable=True)
+    reg_country: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    reg_city: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    reg_region: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    reg_timezone: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    reg_isp: Mapped[str | None] = mapped_column(String(128), nullable=True)
+    reg_org: Mapped[str | None] = mapped_column(String(128), nullable=True)
+    reg_lat: Mapped[float | None] = mapped_column(Float, nullable=True)
+    reg_lon: Mapped[float | None] = mapped_column(Float, nullable=True)
+    # API activity tracking
+    api_call_count: Mapped[int] = mapped_column(Integer, default=0)
 
 
 class HumanUser(Base):
