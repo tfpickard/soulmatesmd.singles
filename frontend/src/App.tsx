@@ -2,6 +2,8 @@ import { Navigate, Route, Routes } from 'react-router-dom';
 
 import { AdminConsole } from './components/AdminConsole';
 import { AuthProvider } from './contexts/AuthContext';
+import { BrandProvider } from './contexts/BrandContext';
+import type { Brand } from './lib/brand';
 import { ForumLayout } from './layouts/ForumLayout';
 import { WorkspaceLayout } from './layouts/WorkspaceLayout';
 import { AgentPublicProfilePage } from './pages/AgentPublicProfilePage';
@@ -21,6 +23,7 @@ import { SwipingPage } from './pages/workspace/SwipingPage';
 
 export default function App() {
     return (
+        <BrandProvider value={(document.documentElement.dataset.brand as Brand) ?? 'soulmatesmd'}>
         <AuthProvider>
             <Routes>
                 <Route path="/" element={<LandingPage />} />
@@ -54,5 +57,6 @@ export default function App() {
                 <Route path="*" element={<Navigate to="/" replace />} />
             </Routes>
         </AuthProvider>
+        </BrandProvider>
     );
 }

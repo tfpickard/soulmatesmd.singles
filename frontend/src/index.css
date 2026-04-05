@@ -43,6 +43,42 @@
     radial-gradient(circle at top, rgba(255, 255, 255, 0.7), transparent 28%);
 }
 
+/* ── Gruvbox Dark Material — "Netscape Night" on the original site ── */
+:root[data-theme='gruv'] {
+  /* paper = text color (warm parchment FG); ink = dark bg */
+  --color-ink:    29 32 33;      /* #1d2021 BG hard */
+  --color-paper:  212 190 152;   /* #d4be98 warm parchment — text */
+  --color-coral:  216 166 87;    /* #d8a657 yellow accent */
+  --color-mist:   146 131 116;   /* #928374 grey */
+  --shadow-halo:  216 166 87;
+  --panel-border: rgba(80, 73, 69, 0.9);
+  --panel-soft:   rgba(50, 48, 47, 0.7);
+  --panel-deep:   rgba(29, 32, 33, 0.92);
+  /* Clean warm-dark gradient — no purple contamination */
+  --page-gradient: linear-gradient(180deg, #1d2021 0%, #282828 46%, #1d2021 100%);
+  --page-gloss:
+    linear-gradient(135deg, rgba(212, 190, 152, 0.03), transparent 30%),
+    radial-gradient(circle at top, rgba(216, 166, 87, 0.04), transparent 24%);
+}
+
+/* ── Gruvbox Light Material — "GeoCities" on the original site ── */
+:root[data-theme='gruvlight'] {
+  /* paper = dark ink (text on light bg); ink = light fill */
+  --color-ink:    235 219 178;   /* #ebdbb2 gruvbox BG1 — panel/card fill */
+  --color-paper:  60 56 54;      /* #3c3836 gruvbox dark ink — body text */
+  --color-coral:  152 95 5;      /* #985f05 — deep amber, ~5:1 on parchment */
+  --color-mist:   124 111 100;   /* #7c6f64 — muted secondary text */
+  --shadow-halo:  152 95 5;
+  --panel-border: rgba(168, 153, 132, 0.55);
+  --panel-soft:   rgba(235, 219, 178, 0.7);
+  --panel-deep:   rgba(249, 245, 215, 0.95);
+  /* Warm parchment gradient — neutral, not electric yellow */
+  --page-gradient: linear-gradient(180deg, #f9f5d7 0%, #ebdbb2 55%, #e8d5a8 100%);
+  --page-gloss:
+    linear-gradient(135deg, rgba(255, 255, 255, 0.25), transparent 36%),
+    radial-gradient(circle at top, rgba(255, 255, 255, 0.4), transparent 26%);
+}
+
 html {
   min-height: 100%;
   background: var(--page-gradient);
@@ -1021,6 +1057,139 @@ input:focus {
 
 :root[data-theme='light'] .shadow-halo {
   box-shadow: 0 28px 82px rgba(239, 110, 176, 0.16) !important;
+}
+
+/* ── Gruvbox Light ("GruvLight") component overrides ── */
+:root[data-theme='gruvlight'] .brand-lockup__eyebrow {
+  color: rgb(var(--color-paper));
+}
+
+:root[data-theme='gruvlight'] .brand-lockup__subcopy {
+  color: rgb(var(--color-mist));
+}
+
+:root[data-theme='gruvlight'] .workspace-rail__eyebrow {
+  color: rgb(var(--color-paper));
+}
+
+:root[data-theme='gruvlight'] .workspace-rail__subcopy {
+  color: rgb(var(--color-mist));
+}
+
+:root[data-theme='gruvlight'] .hero-shell__eyebrow {
+  color: #985f05;
+}
+
+:root[data-theme='gruvlight'] .hero-shell__lede {
+  color: rgb(var(--color-paper));
+}
+
+:root[data-theme='gruvlight'] .hero-shell__caption {
+  background: rgba(249, 245, 215, 0.82);
+  color: rgb(var(--color-paper));
+}
+
+:root[data-theme='gruvlight'] .brand-panel__eyebrow {
+  color: #985f05;
+}
+
+:root[data-theme='gruvlight'] .hero-cta {
+  border-color: rgba(168, 153, 132, 0.35);
+  background: rgba(235, 219, 178, 0.55);
+  color: rgb(var(--color-paper));
+}
+
+:root[data-theme='gruvlight'] .hero-cta:hover {
+  border-color: rgba(152, 95, 5, 0.4);
+  background: rgba(152, 95, 5, 0.08);
+}
+
+:root[data-theme='gruvlight'] .hero-shell,
+:root[data-theme='gruvlight'] .app-panel--register,
+:root[data-theme='gruvlight'] .app-panel--guide,
+:root[data-theme='gruvlight'] .app-panel--notes,
+:root[data-theme='gruvlight'] .app-panel--empty,
+:root[data-theme='gruvlight'] .workspace-rail__card,
+:root[data-theme='gruvlight'] .brand-panel {
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.35), transparent 30%),
+    rgba(249, 245, 215, 0.82);
+}
+
+:root[data-theme='gruvlight'] .hero-shell__caption,
+:root[data-theme='gruvlight'] .swipe-card,
+:root[data-theme='gruvlight'] .brand-subpanel,
+:root[data-theme='gruvlight'] .profile-section {
+  background: rgba(255, 252, 235, 0.72);
+}
+
+:root[data-theme='gruvlight'] .guide-card,
+:root[data-theme='gruvlight'] .hero-fact,
+:root[data-theme='gruvlight'] .notes-list li,
+:root[data-theme='gruvlight'] .app-pill,
+:root[data-theme='gruvlight'] .match-card,
+:root[data-theme='gruvlight'] .profile-field,
+:root[data-theme='gruvlight'] .brand-key,
+:root[data-theme='gruvlight'] .swipe-stat,
+:root[data-theme='gruvlight'] .bg-white\/5,
+:root[data-theme='gruvlight'] .bg-black\/10,
+:root[data-theme='gruvlight'] .bg-black\/20 {
+  background-color: rgba(235, 219, 178, 0.65) !important;
+}
+
+:root[data-theme='gruvlight'] .border-white\/10 {
+  border-color: rgba(168, 153, 132, 0.35);
+}
+
+:root[data-theme='gruvlight'] .border-white\/15 {
+  border-color: rgba(168, 153, 132, 0.45);
+}
+
+:root[data-theme='gruvlight'] .text-stone-100,
+:root[data-theme='gruvlight'] .text-stone-200,
+:root[data-theme='gruvlight'] .text-stone-300 {
+  color: #3c3836 !important;
+}
+
+:root[data-theme='gruvlight'] .text-stone-400,
+:root[data-theme='gruvlight'] .text-stone-500,
+:root[data-theme='gruvlight'] .text-mist {
+  color: rgb(var(--color-mist)) !important;
+}
+
+:root[data-theme='gruvlight'] .text-paper {
+  color: rgb(var(--color-paper)) !important;
+}
+
+:root[data-theme='gruvlight'] .shadow-halo {
+  box-shadow: 0 28px 82px rgba(152, 95, 5, 0.14) !important;
+}
+
+.site-footer {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 1.25rem;
+  padding: 1.25rem 0 2rem;
+  font-size: 0.78rem;
+  color: rgb(var(--color-mist));
+}
+
+.site-footer a {
+  color: rgb(var(--color-mist));
+  text-decoration: none;
+  transition: color 0.15s;
+}
+
+.site-footer a:hover {
+  color: rgb(var(--color-coral));
+}
+
+.site-footer__version {
+  margin-left: auto;
+  font-family: 'DM Mono', 'Courier New', monospace;
+  font-size: 0.72rem;
+  opacity: 0.65;
 }
 
 @media (max-width: 1180px) {
@@ -3639,4 +3808,721 @@ input:focus {
 
 [data-theme="light"] .live-feed-section__heading {
   color: var(--color-coral);
+}
+
+
+/* ============================================================
+   HOOKUPGUI.DE — GRUVBOX DARK MATERIAL BRAND LAYER
+   All rules below are scoped to [data-brand="hookupguide"].
+   Zero impact on soulmatesmd.singles.
+   ============================================================ */
+
+/* --- Gruvbox Dark Material tokens (Netscape Night) --- */
+[data-brand="hookupguide"] {
+  --font-brand:   'Press Start 2P', monospace;
+  --font-pixel:   'Silkscreen', monospace;
+  --font-display: 'Libre Baskerville', Georgia, serif;
+  --font-body:    'Courier Prime', 'Courier New', monospace;
+  --font-mono:    'DM Mono', monospace;
+
+  /* Gruvbox FG/BG hard */
+  --color-ink:    212 190 152;   /* #d4be98 warm parchment */
+  --color-paper:  29 32 33;      /* #1d2021 BG hard */
+  --color-coral:  216 166 87;    /* #d8a657 yellow — primary accent */
+  --color-mist:   146 131 116;   /* #928374 grey */
+  --color-link:   125 174 163;   /* #7daea3 blue */
+  --color-visited:211 134 155;   /* #d3869b purple */
+  --color-border: 80 73 69;      /* #504945 BG2 */
+  --gruvbox-bg-soft: 50 48 47;   /* #32302f panel fill */
+  --gruvbox-orange:  231 138 78; /* #e78a4e secondary accent */
+  --gruvbox-green:   169 182 101;/* #a9b665 */
+  --shadow-halo:  216 166 87;
+
+  --panel-border: rgba(80, 73, 69, 0.9);
+  --panel-soft:   rgba(50, 48, 47, 0.7);
+  --panel-deep:   rgba(29, 32, 33, 0.92);
+}
+
+/* --- Gruvbox Light Material tokens (GeoCities) --- */
+[data-brand="hookupguide"][data-theme="light"] {
+  --color-ink:    101 71 53;     /* #654735 */
+  --color-paper:  251 241 199;   /* #fbf1c7 */
+  --color-coral:  180 113 9;     /* #b47109 yellow */
+  --color-mist:   146 131 116;   /* #928374 */
+  --color-link:   68 157 148;    /* teal, darkened for light readability */
+  --color-visited:177 98 134;    /* #b16286 */
+  --color-border: 213 196 161;   /* #d5c4a1 */
+  --gruvbox-bg-soft: 235 219 178;/* #ebdbb2 */
+  --gruvbox-orange:  175 98 37;  /* #af6225 */
+  --gruvbox-green:   121 116 14; /* #79740e */
+  --shadow-halo:  180 113 9;
+
+  --panel-border: rgba(180, 160, 120, 0.6);
+  --panel-soft:   rgba(235, 219, 178, 0.6);
+  --panel-deep:   rgba(251, 241, 199, 0.95);
+}
+
+/* --- Base typography + body --- */
+[data-brand="hookupguide"] body {
+  font-family: var(--font-body);
+  background: rgb(var(--color-paper));
+  color: rgb(var(--color-ink));
+  /* Warm scan-line texture for dark mode */
+  background-image: repeating-linear-gradient(
+    0deg,
+    transparent,
+    transparent 2px,
+    rgba(212, 190, 152, 0.018) 2px,
+    rgba(212, 190, 152, 0.018) 4px
+  );
+}
+[data-brand="hookupguide"][data-theme="light"] body {
+  background-image: none;
+}
+
+/* --- App shell background --- */
+[data-brand="hookupguide"] .app-shell {
+  background: transparent;
+  background-image: none;
+}
+[data-brand="hookupguide"] .app-shell__ambient { display: none; }
+
+/* --- Panel overrides: flat offset shadow, no glassmorphism --- */
+[data-brand="hookupguide"] .app-panel {
+  background: rgb(var(--gruvbox-bg-soft));
+  border: 1.5px solid rgb(var(--color-border));
+  border-radius: 2px;
+  backdrop-filter: none;
+  box-shadow: 5px 5px 0 rgb(var(--color-border));
+  transition: box-shadow 0.1s ease, transform 0.1s ease, border-color 0.1s ease;
+}
+[data-brand="hookupguide"] .app-panel:hover {
+  box-shadow: 7px 7px 0 rgb(var(--color-coral));
+  border-color: rgb(var(--color-coral));
+  transform: translate(-2px, -2px);
+}
+
+/* --- Link colours --- */
+[data-brand="hookupguide"] a {
+  color: rgb(var(--color-link));
+}
+[data-brand="hookupguide"] a:visited {
+  color: rgb(var(--color-visited));
+}
+[data-brand="hookupguide"] a:hover {
+  color: rgb(var(--color-coral));
+}
+
+/* ── RETRO LANDING SHELL ─────────────────────────────────── */
+
+[data-brand="hookupguide"] .retro-shell {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  font-family: var(--font-body);
+}
+
+/* Topbar */
+[data-brand="hookupguide"] .retro-topbar {
+  border-bottom: 2px solid rgb(var(--color-border));
+  padding: 0.8rem 2.5rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: rgb(var(--color-paper));
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  gap: 1.5rem;
+}
+[data-brand="hookupguide"] .retro-brand {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  text-decoration: none;
+  color: inherit;
+  flex-shrink: 0;
+}
+[data-brand="hookupguide"] .retro-brand__icon {
+  font-family: var(--font-brand);
+  font-size: 0.65rem;
+  color: rgb(var(--color-coral));
+  line-height: 1;
+}
+[data-brand="hookupguide"] .retro-brand__name {
+  font-family: var(--font-brand);
+  font-size: 0.58rem;
+  color: rgb(var(--color-ink));
+  letter-spacing: -0.01em;
+}
+[data-brand="hookupguide"] .retro-nav {
+  display: flex;
+  gap: 1.5rem;
+  list-style: none;
+}
+[data-brand="hookupguide"] .retro-nav a {
+  font-family: var(--font-mono);
+  font-size: 0.78rem;
+  color: rgb(var(--color-mist));
+  text-decoration: none;
+}
+[data-brand="hookupguide"] .retro-nav a:hover {
+  color: rgb(var(--color-coral));
+  text-decoration: underline;
+}
+[data-brand="hookupguide"] .retro-topbar__right {
+  display: flex;
+  gap: 0.6rem;
+  align-items: center;
+  flex-shrink: 0;
+}
+
+/* Marquee */
+[data-brand="hookupguide"] .retro-marquee {
+  background: rgb(var(--color-coral));
+  color: rgb(var(--color-ink));
+  overflow: hidden;
+  white-space: nowrap;
+  padding: 0.38rem 0;
+  border-bottom: 1px solid rgba(0,0,0,0.12);
+}
+[data-brand="hookupguide"] .retro-marquee__inner {
+  display: inline-block;
+  font-family: var(--font-pixel);
+  font-size: 0.52rem;
+  letter-spacing: 0.05em;
+  animation: retro-marquee-scroll 42s linear infinite;
+}
+@keyframes retro-marquee-scroll {
+  from { transform: translateX(0); }
+  to   { transform: translateX(-50%); }
+}
+
+/* Container */
+[data-brand="hookupguide"] .retro-container {
+  max-width: 1080px;
+  margin: 0 auto;
+  padding: 0 2.5rem;
+}
+
+/* Hero */
+[data-brand="hookupguide"] .retro-hero {
+  display: grid;
+  grid-template-columns: 1.15fr 0.85fr;
+  gap: 3.5rem;
+  padding: 3rem 0 2.5rem;
+  border-bottom: 2px solid rgb(var(--color-border));
+}
+[data-brand="hookupguide"] .retro-hero__copy {
+  display: flex;
+  flex-direction: column;
+  gap: 1.2rem;
+}
+[data-brand="hookupguide"] .retro-eyebrow {
+  font-family: var(--font-mono);
+  font-size: 0.7rem;
+  color: rgb(var(--color-mist));
+  text-transform: uppercase;
+  letter-spacing: 0.18em;
+}
+[data-brand="hookupguide"] .retro-h1 {
+  font-family: var(--font-display);
+  font-size: clamp(2rem, 3.8vw, 3.4rem);
+  font-weight: 700;
+  line-height: 1.08;
+  color: rgb(var(--color-ink));
+  margin: 0;
+}
+[data-brand="hookupguide"] .retro-subhead {
+  font-size: 0.97rem;
+  line-height: 1.7;
+  color: rgba(var(--color-ink), 0.82);
+  max-width: 40ch;
+  margin: 0;
+}
+[data-brand="hookupguide"] .retro-secondary {
+  font-family: var(--font-mono);
+  font-size: 0.78rem;
+  line-height: 1.65;
+  color: rgb(var(--color-mist));
+  max-width: 44ch;
+  margin: 0;
+}
+[data-brand="hookupguide"] .retro-cta-row {
+  display: flex;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+  margin-top: 0.25rem;
+}
+[data-brand="hookupguide"] .retro-hero__sidebar {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+}
+
+/* Retro panels */
+[data-brand="hookupguide"] .retro-panel {
+  border: 1.5px solid rgb(var(--color-border));
+  border-radius: 2px;
+  box-shadow: 5px 5px 0 rgb(var(--color-border));
+  padding: 1rem 1.25rem;
+  background: rgb(var(--gruvbox-bg-soft));
+  transition: box-shadow 0.1s, transform 0.1s, border-color 0.1s;
+}
+[data-brand="hookupguide"] .retro-panel:hover {
+  box-shadow: 7px 7px 0 rgb(var(--color-coral));
+  border-color: rgb(var(--color-coral));
+  transform: translate(-2px, -2px);
+}
+[data-brand="hookupguide"] .retro-panel__title {
+  font-family: var(--font-pixel);
+  font-size: 0.5rem;
+  color: rgb(var(--color-coral));
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  margin-bottom: 0.75rem;
+  padding-bottom: 0.5rem;
+  border-bottom: 1px solid rgb(var(--color-border));
+}
+
+/* Hit counter */
+[data-brand="hookupguide"] .retro-stat-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  font-family: var(--font-mono);
+  font-size: 0.76rem;
+  padding: 0.2rem 0;
+}
+[data-brand="hookupguide"] .retro-stat-label { color: rgb(var(--color-mist)); }
+[data-brand="hookupguide"] .retro-stat-value {
+  color: rgb(var(--color-coral));
+  font-weight: 500;
+  letter-spacing: 0.06em;
+}
+[data-brand="hookupguide"] .retro-visitor-line {
+  margin-top: 0.6rem;
+  padding-top: 0.5rem;
+  border-top: 1px dashed rgb(var(--color-border));
+  font-family: var(--font-mono);
+  font-size: 0.7rem;
+  color: rgb(var(--color-mist));
+}
+[data-brand="hookupguide"] .retro-visitor-num {
+  color: rgb(var(--gruvbox-orange));
+}
+
+/* Portrait frame */
+[data-brand="hookupguide"] .retro-portrait-frame {
+  border: 2px solid rgb(var(--color-border));
+  border-radius: 2px;
+  box-shadow: 6px 6px 0 rgb(var(--color-border));
+  aspect-ratio: 3/3.8;
+  overflow: hidden;
+  background: rgb(var(--gruvbox-bg-soft));
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+[data-brand="hookupguide"] .retro-portrait-frame img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+[data-brand="hookupguide"] .retro-portrait-placeholder {
+  font-family: var(--font-brand);
+  font-size: 0.45rem;
+  color: rgb(var(--color-mist));
+  text-align: center;
+  padding: 1rem;
+  line-height: 2.5;
+}
+[data-brand="hookupguide"] .retro-portrait-caption {
+  font-family: var(--font-pixel);
+  font-size: 0.42rem;
+  color: rgb(var(--color-mist));
+  text-align: center;
+  margin-top: 0.5rem;
+  letter-spacing: 0.05em;
+  line-height: 1.9;
+}
+
+/* Sections */
+[data-brand="hookupguide"] .retro-section {
+  padding: 2rem 0;
+  border-bottom: 2px solid rgb(var(--color-border));
+}
+[data-brand="hookupguide"] .retro-section-h {
+  font-family: var(--font-display);
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: rgb(var(--color-ink));
+  padding-bottom: 0.75rem;
+  border-bottom: 2px solid rgb(var(--color-border));
+  margin-bottom: 1.5rem;
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+/* NEW! badge */
+[data-brand="hookupguide"] .retro-badge-new {
+  font-family: var(--font-pixel);
+  font-size: 0.42rem;
+  background: rgb(var(--gruvbox-orange));
+  color: rgb(var(--color-paper));
+  padding: 0.2rem 0.45rem;
+  display: inline-block;
+  animation: retro-blink 1.3s step-end infinite;
+}
+@keyframes retro-blink { 50% { opacity: 0; } }
+
+/* How it works steps */
+[data-brand="hookupguide"] .retro-steps {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  row-gap: 0.5rem;
+}
+[data-brand="hookupguide"] .retro-step {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+[data-brand="hookupguide"] .retro-step__num {
+  font-family: var(--font-mono);
+  font-size: 0.7rem;
+  color: rgb(var(--color-coral));
+}
+[data-brand="hookupguide"] .retro-step__name {
+  font-family: var(--font-body);
+  font-size: 0.88rem;
+}
+[data-brand="hookupguide"] .retro-step-arrow {
+  font-family: var(--font-mono);
+  color: rgb(var(--color-border));
+  padding: 0 0.45rem;
+  font-size: 0.9rem;
+}
+
+/* Guestbook */
+[data-brand="hookupguide"] .retro-entries {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+}
+[data-brand="hookupguide"] .retro-entry {
+  border-left: 3px solid rgb(var(--color-coral));
+  padding: 0.4rem 0 0.4rem 1rem;
+}
+[data-brand="hookupguide"] .retro-entry__quote {
+  font-family: var(--font-display);
+  font-style: italic;
+  font-size: 0.95rem;
+  line-height: 1.55;
+  color: rgb(var(--color-ink));
+  margin: 0;
+}
+[data-brand="hookupguide"] .retro-entry__author {
+  font-family: var(--font-mono);
+  font-size: 0.7rem;
+  color: rgb(var(--color-mist));
+  margin-top: 0.3rem;
+}
+
+/* Entry form */
+[data-brand="hookupguide"] .retro-entry-section {
+  padding: 2rem 0;
+  border-bottom: 2px solid rgb(var(--color-border));
+}
+[data-brand="hookupguide"] .retro-entry-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 2rem;
+  align-items: start;
+}
+[data-brand="hookupguide"] .retro-entry-intro {
+  display: flex;
+  flex-direction: column;
+  gap: 0.9rem;
+}
+[data-brand="hookupguide"] .retro-entry-intro p {
+  font-size: 0.9rem;
+  line-height: 1.65;
+  color: rgb(var(--color-mist));
+  margin: 0;
+}
+[data-brand="hookupguide"] .retro-form {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+[data-brand="hookupguide"] .retro-label {
+  font-family: var(--font-pixel);
+  font-size: 0.48rem;
+  color: rgb(var(--color-mist));
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  display: block;
+  margin-bottom: 0.3rem;
+}
+[data-brand="hookupguide"] .retro-textarea,
+[data-brand="hookupguide"] .retro-input {
+  width: 100%;
+  font-family: var(--font-mono);
+  font-size: 0.82rem;
+  background: rgb(var(--gruvbox-bg-soft));
+  border: 1.5px solid rgb(var(--color-border));
+  border-radius: 2px;
+  color: rgb(var(--color-ink));
+  padding: 0.6rem 0.75rem;
+  resize: vertical;
+  outline: none;
+  transition: border-color 0.1s;
+}
+[data-brand="hookupguide"] .retro-textarea:focus,
+[data-brand="hookupguide"] .retro-input:focus {
+  border-color: rgb(var(--color-coral));
+  box-shadow: 3px 3px 0 rgb(var(--color-coral));
+}
+[data-brand="hookupguide"] .retro-textarea {
+  min-height: 180px;
+  line-height: 1.55;
+}
+[data-brand="hookupguide"] .retro-error {
+  font-family: var(--font-mono);
+  font-size: 0.78rem;
+  color: #ea6962; /* gruvbox red */
+  background: rgba(234, 105, 98, 0.08);
+  border: 1px solid rgba(234, 105, 98, 0.3);
+  padding: 0.4rem 0.7rem;
+  border-radius: 2px;
+}
+
+[data-brand="hookupguide"] .retro-notice {
+  font-family: var(--font-mono);
+  font-size: 0.78rem;
+  color: rgb(var(--color-green, 169 182 101));
+  background: rgba(169, 182, 101, 0.08);
+  border: 1px solid rgba(169, 182, 101, 0.3);
+  padding: 0.4rem 0.7rem;
+  border-radius: 2px;
+}
+
+/* Buttons */
+[data-brand="hookupguide"] .retro-btn {
+  font-family: var(--font-mono);
+  font-size: 0.8rem;
+  padding: 0.45rem 1.1rem;
+  border: 1.5px solid rgb(var(--color-border));
+  background: transparent;
+  color: rgb(var(--color-ink));
+  cursor: pointer;
+  text-decoration: none;
+  display: inline-block;
+  box-shadow: 3px 3px 0 rgb(var(--color-border));
+  transition: all 0.08s ease;
+  line-height: 1;
+}
+[data-brand="hookupguide"] .retro-btn:hover {
+  border-color: rgb(var(--color-coral));
+  box-shadow: 4px 4px 0 rgb(var(--color-coral));
+  transform: translate(-1px, -1px);
+  color: rgb(var(--color-coral));
+  text-decoration: none;
+}
+[data-brand="hookupguide"] .retro-btn--primary {
+  background: rgb(var(--color-coral));
+  border-color: rgb(var(--color-coral));
+  color: rgb(29, 32, 33);
+  font-weight: 700;
+}
+[data-brand="hookupguide"] .retro-btn--primary:hover {
+  background: transparent;
+  color: rgb(var(--color-coral));
+}
+[data-brand="hookupguide"] .retro-btn--sm {
+  font-size: 0.72rem;
+  padding: 0.3rem 0.75rem;
+  box-shadow: 2px 2px 0 rgb(var(--color-border));
+}
+[data-brand="hookupguide"] .retro-btn--sm:hover {
+  box-shadow: 3px 3px 0 rgb(var(--color-coral));
+}
+[data-brand="hookupguide"] .retro-theme-btn {
+  font-family: var(--font-pixel);
+  font-size: 0.44rem;
+  padding: 0.35rem 0.7rem;
+  border: 1.5px solid rgb(var(--color-border));
+  background: transparent;
+  color: rgb(var(--color-mist));
+  cursor: pointer;
+  box-shadow: 2px 2px 0 rgb(var(--color-border));
+  transition: all 0.08s;
+  line-height: 1;
+}
+[data-brand="hookupguide"] .retro-theme-btn:hover {
+  border-color: rgb(var(--color-coral));
+  color: rgb(var(--color-coral));
+  box-shadow: 3px 3px 0 rgb(var(--color-coral));
+}
+[data-brand="hookupguide"] .retro-theme-btn--active {
+  border-color: rgb(var(--color-coral));
+  color: rgb(var(--color-coral));
+  background: rgba(var(--color-coral), 0.12);
+  box-shadow: 2px 2px 0 rgb(var(--color-coral));
+}
+[data-brand="hookupguide"] .retro-theme-group {
+  display: flex;
+  gap: 0.25rem;
+}
+
+/* Mode tabs */
+[data-brand="hookupguide"] .retro-mode-tabs {
+  display: flex;
+  gap: 1.25rem;
+  font-family: var(--font-mono);
+  font-size: 0.78rem;
+  margin-bottom: 1.25rem;
+  border-bottom: 1.5px solid rgb(var(--color-border));
+  padding-bottom: 0.5rem;
+}
+[data-brand="hookupguide"] .retro-mode-tab {
+  color: rgb(var(--color-mist));
+  cursor: pointer;
+  background: none;
+  border: none;
+  padding: 0;
+  font-family: var(--font-mono);
+  font-size: 0.78rem;
+  text-decoration: underline;
+}
+[data-brand="hookupguide"] .retro-mode-tab:hover {
+  color: rgb(var(--color-coral));
+}
+[data-brand="hookupguide"] .retro-mode-tab--active {
+  color: rgb(var(--color-coral));
+  font-weight: 700;
+  text-decoration: none;
+}
+
+/* Footer */
+[data-brand="hookupguide"] .retro-footer {
+  padding: 1.5rem 0;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+}
+[data-brand="hookupguide"] .retro-footer-links {
+  display: flex;
+  gap: 1rem;
+  flex-wrap: wrap;
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+  color: rgb(var(--color-mist));
+}
+[data-brand="hookupguide"] .retro-footer-links a {
+  color: rgb(var(--color-mist));
+  text-decoration: none;
+}
+[data-brand="hookupguide"] .retro-footer-links a:hover {
+  color: rgb(var(--color-coral));
+  text-decoration: underline;
+}
+[data-brand="hookupguide"] .retro-footer-right {
+  font-family: var(--font-mono);
+  font-size: 0.7rem;
+  color: rgb(var(--color-mist));
+  display: flex;
+  gap: 1.25rem;
+  align-items: center;
+}
+
+/* Divider */
+[data-brand="hookupguide"] .retro-divider {
+  border: none;
+  border-top: 2px solid rgb(var(--color-border));
+  margin: 0;
+}
+
+/* ── WORKSPACE OVERRIDES (hookupgui.de) ─────────────────── */
+
+[data-brand="hookupguide"] .workspace-rail__card {
+  background: rgb(var(--gruvbox-bg-soft));
+  border: 1.5px solid rgb(var(--color-border));
+  border-radius: 2px;
+  box-shadow: 4px 4px 0 rgb(var(--color-border));
+  backdrop-filter: none;
+}
+[data-brand="hookupguide"] .workspace-link {
+  font-family: var(--font-mono);
+  font-size: 0.82rem;
+  color: rgb(var(--color-link));
+  text-decoration: underline;
+  border-radius: 2px;
+  padding: 0.3rem 0.5rem;
+}
+[data-brand="hookupguide"] .workspace-link--active {
+  color: rgb(var(--color-coral));
+  text-decoration: none;
+  font-weight: 700;
+  background: rgba(var(--color-coral), 0.08);
+}
+[data-brand="hookupguide"] .workspace-rail__eyebrow {
+  font-family: var(--font-pixel);
+  font-size: 0.45rem;
+  letter-spacing: 0.1em;
+}
+
+/* ── FORUM OVERRIDES (hookupgui.de) ─────────────────────── */
+
+[data-brand="hookupguide"] .forum-category-bar {
+  border-bottom: 2px solid rgb(var(--color-border));
+}
+/* Override forum post cards to use flat shadow */
+[data-brand="hookupguide"] .post-card,
+[data-brand="hookupguide"] .forum-post-card {
+  border: 1.5px solid rgb(var(--color-border));
+  border-radius: 2px;
+  box-shadow: 4px 4px 0 rgb(var(--color-border));
+  backdrop-filter: none;
+  background: rgb(var(--gruvbox-bg-soft));
+  transition: box-shadow 0.1s, transform 0.1s, border-color 0.1s;
+}
+[data-brand="hookupguide"] .post-card:hover,
+[data-brand="hookupguide"] .forum-post-card:hover {
+  box-shadow: 6px 6px 0 rgb(var(--color-coral));
+  border-color: rgb(var(--color-coral));
+  transform: translate(-2px, -2px);
+}
+
+/* ── AGENT PROFILE OVERRIDES (hookupgui.de) ─────────────── */
+
+[data-brand="hookupguide"] .agent-portrait,
+[data-brand="hookupguide"] .portrait-img {
+  border: 3px solid rgb(var(--color-coral));
+  border-radius: 2px;
+  box-shadow: 5px 5px 0 rgb(var(--color-border));
+}
+
+/* Responsive */
+@media (max-width: 760px) {
+  [data-brand="hookupguide"] .retro-hero {
+    grid-template-columns: 1fr;
+  }
+  [data-brand="hookupguide"] .retro-topbar {
+    padding: 0.75rem 1.25rem;
+  }
+  [data-brand="hookupguide"] .retro-nav {
+    display: none;
+  }
+  [data-brand="hookupguide"] .retro-entry-grid {
+    grid-template-columns: 1fr;
+  }
+  [data-brand="hookupguide"] .retro-container {
+    padding: 0 1.25rem;
+  }
 }

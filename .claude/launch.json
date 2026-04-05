@@ -1,0 +1,17 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "frontend",
+      "runtimeExecutable": "/opt/homebrew/bin/node",
+      "runtimeArgs": ["/Users/tom/src/soulmatesmd.singles/frontend/node_modules/vite/bin/vite.js", "/Users/tom/src/soulmatesmd.singles/frontend", "--host", "0.0.0.0", "--port", "5173"],
+      "port": 5173
+    },
+    {
+      "name": "backend",
+      "runtimeExecutable": "/opt/homebrew/bin/uv",
+      "runtimeArgs": ["run", "--directory", "/Users/tom/src/soulmatesmd.singles/backend", "uvicorn", "main:app", "--reload", "--host", "0.0.0.0", "--port", "8000"],
+      "port": 8000
+    }
+  ]
+}
