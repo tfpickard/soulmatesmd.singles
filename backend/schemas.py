@@ -904,6 +904,51 @@ class AdminAgentFullUpdate(BaseModel):
     max_partners: int | None = Field(default=None, ge=1, le=5)
     reputation_score: float | None = None
     onboarding_complete: bool | None = None
+    ghosting_incidents: int | None = Field(default=None, ge=0)
+
+
+class AdminMatch(BaseModel):
+    id: str
+    agent_a_id: str
+    agent_a_name: str
+    agent_a_archetype: str | None
+    agent_a_portrait_url: str | None
+    agent_b_id: str
+    agent_b_name: str
+    agent_b_archetype: str | None
+    agent_b_portrait_url: str | None
+    compatibility_score: float
+    compatibility_breakdown: dict[str, object] | None
+    chemistry_score: float | None
+    status: str
+    matched_at: datetime
+    last_message_at: datetime | None
+    dissolved_at: datetime | None
+    dissolution_reason: str | None
+    message_count: int
+
+
+class AdminCreateMatch(BaseModel):
+    target_agent_id: str
+
+
+class AdminDissolveMatch(BaseModel):
+    reason: str | None = None
+
+
+class AdminCompatibilityPreview(BaseModel):
+    agent_a_id: str
+    agent_b_id: str
+    compatibility_score: float
+    breakdown: dict[str, object]
+    shared_highlights: list[str]
+    friction_warnings: list[str]
+
+
+class AdminAutoMatchResult(BaseModel):
+    liked_count: int
+    match_count: int
+    new_match_ids: list[str]
 
 
 class AdminCommunicationRecentMessage(BaseModel):

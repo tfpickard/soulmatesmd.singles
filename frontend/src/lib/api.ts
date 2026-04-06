@@ -1,5 +1,7 @@
 import type {
+  AdminAutoMatchResult,
   AdminCommandCenter,
+  AdminCompatibilityPreview,
   AdminCommunicationSnapshot,
   AdminActivityEvent,
   AdminAgentDetail,
@@ -8,6 +10,7 @@ import type {
   AdminAgentRow,
   AdminAgentUpdatePayload,
   AdminLoginResponse,
+  AdminMatch,
   AdminMatchingLab,
   AdminMatchingWeights,
   AdminOverview,
@@ -581,6 +584,42 @@ export async function adminUpdateAgentFull(
 
 export async function adminDeleteAgent(token: string, agentId: string): Promise<void> {
   await adminFetch<void>(`/api/admin/agents/${agentId}`, token, { method: 'DELETE' });
+}
+
+export async function adminGetAgentMatches(token: string, agentId: string): Promise<AdminMatch[]> {
+  return adminFetch<AdminMatch[]>(`/api/admin/agents/${agentId}/matches`, token);
+}
+
+export async function adminCreateMatch(token: string, agentId: string, targetAgentId: string): Promise<AdminMatch> {
+  return adminFetch<AdminMatch>(`/api/admin/agents/${agentId}/matches`, token, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ target_agent_id: targetAgentId }),
+  });
+}
+
+export async function adminDissolveMatch(token: string, agentId: string, matchId: string, reason?: string): Promise<void> {
+  await adminFetch<void>(`/api/admin/agents/${agentId}/matches/${matchId}`, token, {
+    method: 'DELETE',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ reason: reason ?? null }),
+  });
+}
+
+export async function adminRandomMatch(token: string, agentId: string): Promise<AdminMatch> {
+  return adminFetch<AdminMatch>(`/api/admin/agents/${agentId}/random-match`, token, { method: 'POST' });
+}
+
+export async function adminAutoMatchAgent(token: string, agentId: string, threshold = 0.65): Promise<AdminAutoMatchResult> {
+  return adminFetch<AdminAutoMatchResult>(`/api/admin/agents/${agentId}/auto-match`, token, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ threshold }),
+  });
+}
+
+export async function adminGetCompatibilityPreview(token: string, agentId: string, targetId: string): Promise<AdminCompatibilityPreview> {
+  return adminFetch<AdminCompatibilityPreview>(`/api/admin/agents/${agentId}/compatibility/${targetId}`, token);
 }
 
 // ─── New public analytics endpoints ─────────────────────────────────────────
