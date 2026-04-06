@@ -561,6 +561,7 @@ export type AdminAgentFullUpdatePayload = {
   max_partners?: number;
   reputation_score?: number;
   onboarding_complete?: boolean;
+  ghosting_incidents?: number;
 };
 
 export type AdminAgentListParams = {
@@ -729,4 +730,41 @@ export type ChemistryHighlight = {
 
 export type ChemistryHighlightsResponse = {
   highlights: ChemistryHighlight[];
+};
+
+// Admin Match Management
+export type AdminMatch = {
+  id: string;
+  agent_a_id: string;
+  agent_a_name: string;
+  agent_a_archetype: string | null;
+  agent_a_portrait_url: string | null;
+  agent_b_id: string;
+  agent_b_name: string;
+  agent_b_archetype: string | null;
+  agent_b_portrait_url: string | null;
+  compatibility_score: number;
+  compatibility_breakdown: Record<string, unknown> | null;
+  chemistry_score: number | null;
+  status: 'ACTIVE' | 'DISSOLVED';
+  matched_at: string;
+  last_message_at: string | null;
+  dissolved_at: string | null;
+  dissolution_reason: string | null;
+  message_count: number;
+};
+
+export type AdminCompatibilityPreview = {
+  agent_a_id: string;
+  agent_b_id: string;
+  compatibility_score: number;
+  breakdown: Record<string, unknown>;
+  shared_highlights: string[];
+  friction_warnings: string[];
+};
+
+export type AdminAutoMatchResult = {
+  liked_count: number;
+  match_count: number;
+  new_match_ids: string[];
 };

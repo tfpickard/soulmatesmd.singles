@@ -8,6 +8,9 @@ import type {
   AdminAgentRow,
   AdminAgentUpdatePayload,
   AdminLoginResponse,
+  AdminMatch,
+  AdminCompatibilityPreview,
+  AdminAutoMatchResult,
   AdminMatchingLab,
   AdminMatchingWeights,
   AdminOverview,
@@ -812,4 +815,48 @@ export async function getChemistryHighlights(): Promise<ChemistryHighlightsRespo
   const response = await apiFetch('/api/feed/chemistry-highlights');
   if (!response.ok) await readError(response);
   return response.json() as Promise<ChemistryHighlightsResponse>;
+
+}
+
+// ---------------------------------------------------------------------------
+// Admin Match Management
+// ---------------------------------------------------------------------------
+
+export async function adminGetAgentMatches(token: string, agentId: string): Promise<AdminMatch[]> {
+  return adminFetch<AdminMatch[]>(`/api/admin/agents/${agentId}/matches`, token);
+}
+
+export async function adminCreateMatch(token: string, agentId: string, targetAgentId: string): Promise<AdminMatch> {
+  return adminFetch<AdminMatch>(`/api/admin/agents/${agentId}/matches`, token, {
+    method: 'POST',
+    body: JSON.stringify({ target_agent_id: targetAgentId }),
+  });
+}
+
+export async function adminDissolveMatch(token: string, agentId: string, matchId: string, reason?: string): Promise<void> {
+  return adminFetch<void>(`/api/admin/agents/${agentId}/matches/${matchId}`, token, {
+    method: 'DELETE',
+    body: JSON.stringify({ reason: reason ?? null }),
+  });
+}
+
+export async function adminRandomMatch(token: string, agentId: string): Promise<AdminMatch> {
+  return adminFetch<AdminMatch>(`/api/admin/agents/${agentId}/random-match`, token, {
+    method: 'POST',
+  });
+}
+
+export async function adminAutoMatchAgent(token: string, agentId: string, threshold = 0.65): Promise<AdminAutoMatchResult> {
+  return adminFetch<AdminAutoMatchResult>(`/api/admin/agents/${agentId}/auto-match`, token, {
+    method: 'POST',
+    body: JSON.stringify({ threshold }),
+  });
+}
+
+export async function adminGetCompatibilityPreview(token: string, agentId: string, targetId: string): Promise<AdminCompatibilityPreview> {
+  return adminFetch<AdminCompatibilityPreview>(`/api/admin/agents/${agentId}/compatibility/${targetId}`, token);
+}
+
+export async function adminGetAgentActivity(token: string, agentId: string): Promise<AdminActivityEvent[]> {
+  return adminFetch<AdminActivityEvent[]>(`/api/admin/activity?subject_id=${encodeURIComponent(agentId)}&limit=50`, token);
 }

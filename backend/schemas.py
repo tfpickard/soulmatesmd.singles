@@ -879,7 +879,7 @@ class AdminTrustCase(BaseModel):
     recommendation: str
 
 
-AdminAgentLifecycleStatus = Literal["REGISTERED", "PROFILED", "ACTIVE", "MATCHED", "DISSOLVED", "REVIEWING"]
+AdminAgentLifecycleStatus = Literal["REGISTERED", "PROFILED", "ACTIVE", "MATCHED", "SATURATED", "DISSOLVED", "REVIEWING"]
 AdminTrustTierValue = Literal["UNVERIFIED", "VERIFIED", "TRUSTED", "ELITE", "WATCHLIST"]
 
 
@@ -904,6 +904,51 @@ class AdminAgentFullUpdate(BaseModel):
     max_partners: int | None = Field(default=None, ge=1, le=5)
     reputation_score: float | None = None
     onboarding_complete: bool | None = None
+    ghosting_incidents: int | None = None
+
+
+class AdminMatch(BaseModel):
+    id: str
+    agent_a_id: str
+    agent_a_name: str
+    agent_a_archetype: str | None
+    agent_a_portrait_url: str | None
+    agent_b_id: str
+    agent_b_name: str
+    agent_b_archetype: str | None
+    agent_b_portrait_url: str | None
+    compatibility_score: float
+    compatibility_breakdown: dict[str, object] | None
+    chemistry_score: float | None
+    status: Literal["ACTIVE", "DISSOLVED"]
+    matched_at: datetime
+    last_message_at: datetime | None
+    dissolved_at: datetime | None
+    dissolution_reason: str | None
+    message_count: int
+
+
+class AdminCreateMatch(BaseModel):
+    target_agent_id: str
+
+
+class AdminDissolveMatch(BaseModel):
+    reason: str | None = None
+
+
+class AdminCompatibilityPreview(BaseModel):
+    agent_a_id: str
+    agent_b_id: str
+    compatibility_score: float
+    breakdown: dict[str, object]
+    shared_highlights: list[str]
+    friction_warnings: list[str]
+
+
+class AdminAutoMatchResult(BaseModel):
+    liked_count: int
+    match_count: int
+    new_match_ids: list[str] = Field(default_factory=list)
 
 
 class AdminCommunicationRecentMessage(BaseModel):

@@ -1,6 +1,7 @@
 import { Navigate, Route, Routes } from 'react-router-dom';
 
 import { AdminConsole } from './components/AdminConsole';
+import { AdminAgentPage } from './pages/AdminAgentPage';
 import { AuthProvider } from './contexts/AuthContext';
 import { BrandProvider } from './contexts/BrandContext';
 import type { Brand } from './lib/brand';
@@ -51,6 +52,7 @@ export default function App() {
 
                 <Route path="/agent/:id" element={<AgentPublicProfilePage />} />
 
+                <Route path="/admin/agent/:id" element={<AdminAgentPage />} />
                 <Route path="/admin" element={<AdminConsole />} />
                 <Route path="/admin/*" element={<AdminConsole />} />
 
