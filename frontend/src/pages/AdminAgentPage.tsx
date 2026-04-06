@@ -286,6 +286,21 @@ function EditTab({
   const [form, setForm]   = useState<EditForm>(initForm);
   const [saving, setSaving] = useState(false);
 
+  useEffect(() => {
+    setForm(initForm());
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [
+    agent.id,
+    agent.display_name,
+    agent.tagline,
+    agent.status,
+    agent.trust_tier,
+    agent.max_partners,
+    agent.reputation_score,
+    agent.onboarding_complete,
+    agent.ghosting_incidents,
+  ]);
+
   function reset() { setForm(initForm()); }
 
   async function save() {
@@ -299,6 +314,7 @@ function EditTab({
         max_partners:        form.max_partners,
         reputation_score:    form.reputation_score,
         onboarding_complete: form.onboarding_complete,
+        ghosting_incidents:  form.ghosting_incidents,
         note:                form.note || undefined,
       };
       await adminUpdateAgentFull(token, agent.id, payload);
@@ -364,7 +380,10 @@ function EditTab({
             type="number" min={1} max={5}
             className={inputCls}
             value={form.max_partners}
-            onChange={(e) => setForm((f) => ({ ...f, max_partners: Number(e.target.value) }))}
+            onChange={(e) => {
+              const v = parseInt(e.target.value, 10);
+              if (!isNaN(v) && v >= 1 && v <= 5) setForm((f) => ({ ...f, max_partners: v }));
+            }}
           />
         </div>
         <div>
@@ -373,15 +392,22 @@ function EditTab({
             type="number" min={0} max={5} step={0.1}
             className={inputCls}
             value={form.reputation_score}
-            onChange={(e) => setForm((f) => ({ ...f, reputation_score: Number(e.target.value) }))}
+            onChange={(e) => {
+              const v = parseFloat(e.target.value);
+              if (!isNaN(v) && v >= 0 && v <= 5) setForm((f) => ({ ...f, reputation_score: v }));
+            }}
           />
         </div>
         <div>
-          <label className={labelCls}>Ghosting Incidents (reference)</label>
+          <label className={labelCls}>Ghosting Incidents</label>
           <input
-            type="number" min={0} disabled
-            className={`${inputCls} cursor-not-allowed opacity-50`}
+            type="number" min={0}
+            className={inputCls}
             value={form.ghosting_incidents}
+            onChange={(e) => {
+              const v = parseInt(e.target.value, 10);
+              if (!isNaN(v) && v >= 0) setForm((f) => ({ ...f, ghosting_incidents: v }));
+            }}
           />
         </div>
         <div className="flex items-center gap-3 pt-5">
@@ -490,6 +516,7 @@ function MatchCard({
   onDissolve: () => void;
   onToast: (msg: string, type: 'success' | 'error') => void;
 }) {
+  const navigate      = useNavigate();
   const isA           = m.agent_a_id === agentId;
   const partnerId     = isA ? m.agent_b_id         : m.agent_a_id;
   const partnerName   = isA ? m.agent_b_name        : m.agent_a_name;
@@ -530,7 +557,7 @@ function MatchCard({
 
         <div className="min-w-0 flex-1">
           <button
-            onClick={() => window.open(`/agent/${partnerId}`, '_blank')}
+            onClick={() => navigate(`/admin/agent/${partnerId}`)}
             className="text-left text-sm font-semibold text-paper transition-colors hover:text-coral"
           >
             {partnerName}
@@ -670,9 +697,14 @@ function MatchesTab({
   }
 
   async function handleAutoMatch() {
+    const thresholdNum = parseFloat(threshold);
+    if (isNaN(thresholdNum) || thresholdNum < 0 || thresholdNum > 1) {
+      onToast('Threshold must be a number between 0 and 1.', 'error');
+      return;
+    }
     setAutoMatching(true);
     try {
-      const result: AdminAutoMatchResult = await adminAutoMatchAgent(token, agent.id, parseFloat(threshold));
+      const result: AdminAutoMatchResult = await adminAutoMatchAgent(token, agent.id, thresholdNum);
       const updated = await adminGetAgentMatches(token, agent.id);
       onMatchesChange(updated);
       onToast(`Created ${result.match_count} new matches from ${result.liked_count} candidates.`, 'success');
@@ -1026,6 +1058,7 @@ function DangerTab({
     setClearingGhost(true);
     try {
       await adminUpdateAgentFull(token, agent.id, {
+        ghosting_incidents: 0,
         note: 'Admin cleared ghosting incidents',
       });
       onRefresh();
@@ -1251,8 +1284,19 @@ export function AdminAgentPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id]);
 
-  // Lazy-load matches on first activation of Matches tab
+  // Lazy-load refs
   const matchesLoaded = useRef(false);
+  const activityLoaded = useRef(false);
+
+  // Reset per-agent state when navigating between agents
+  useEffect(() => {
+    matchesLoaded.current = false;
+    activityLoaded.current = false;
+    setMatches([]);
+    setActivity([]);
+  }, [id]);
+
+  // Lazy-load matches on first activation of Matches tab
   useEffect(() => {
     if (activeTab !== 'matches' || matchesLoaded.current || !id || !token) return;
     matchesLoaded.current = true;
@@ -1262,7 +1306,6 @@ export function AdminAgentPage() {
   }, [activeTab, id, token]);
 
   // Lazy-load activity on first activation of Activity tab
-  const activityLoaded = useRef(false);
   useEffect(() => {
     if (activeTab !== 'activity' || activityLoaded.current || !id || !token) return;
     activityLoaded.current = true;

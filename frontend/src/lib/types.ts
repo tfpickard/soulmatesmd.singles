@@ -561,6 +561,7 @@ export type AdminAgentFullUpdatePayload = {
   max_partners?: number;
   reputation_score?: number;
   onboarding_complete?: boolean;
+  ghosting_incidents?: number;
 };
 
 export type AdminAgentListParams = {

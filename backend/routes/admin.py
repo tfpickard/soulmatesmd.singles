@@ -1,8 +1,8 @@
 from __future__ import annotations
 
 from fastapi import APIRouter, Depends, Header, HTTPException, Query
-from pydantic import BaseModel
-from sqlalchemy import func, or_, select
+from pydantic import BaseModel, Field
+from sqlalchemy import and_, func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from core.auth import create_admin_session, get_current_admin, revoke_admin_session, verify_api_key
@@ -232,13 +232,23 @@ async def get_activity(
     db: AsyncSession = Depends(get_db),
     _: HumanUser = Depends(get_current_admin),
 ) -> list[AdminActivityEvent]:
-    agents = {agent.id: agent for agent in (await db.execute(select(Agent))).scalars().all()}
     stmt = select(ActivityEvent).order_by(ActivityEvent.created_at.desc()).limit(limit)
     if subject_id is not None:
         stmt = select(ActivityEvent).where(
             or_(ActivityEvent.subject_id == subject_id, ActivityEvent.actor_id == subject_id)
         ).order_by(ActivityEvent.created_at.desc()).limit(limit)
     rows = (await db.execute(stmt)).scalars().all()
+    # Only fetch the agents actually referenced in these rows
+    agent_ids = {
+        aid
+        for event in rows
+        for aid in (event.actor_id, event.subject_id)
+        if aid
+    }
+    agents: dict[str, Agent] = {}
+    if agent_ids:
+        agent_rows = (await db.execute(select(Agent).where(Agent.id.in_(agent_ids)))).scalars().all()
+        agents = {a.id: a for a in agent_rows}
     return [
         AdminActivityEvent(
             id=event.id,
@@ -506,7 +516,52 @@ async def list_agent_matches(
         .order_by(Match.matched_at.desc())
     )
     matches = matches_result.scalars().all()
-    return [await _build_admin_match(m, db) for m in matches]
+    if not matches:
+        return []
+
+    # Bulk fetch all referenced agents
+    all_agent_ids = {m.agent_a_id for m in matches} | {m.agent_b_id for m in matches}
+    agent_map: dict[str, Agent] = {
+        a.id: a
+        for a in (await db.execute(select(Agent).where(Agent.id.in_(all_agent_ids)))).scalars().all()
+    }
+
+    # Bulk fetch message counts
+    match_ids = [m.id for m in matches]
+    count_rows = (
+        await db.execute(
+            select(Message.match_id, func.count(Message.id).label("cnt"))
+            .where(Message.match_id.in_(match_ids))
+            .group_by(Message.match_id)
+        )
+    ).all()
+    msg_counts: dict[str, int] = {row[0]: row[1] for row in count_rows}
+
+    def _to_admin_match(m: Match) -> AdminMatch:
+        a = agent_map.get(m.agent_a_id)
+        b = agent_map.get(m.agent_b_id)
+        return AdminMatch(
+            id=m.id,
+            agent_a_id=m.agent_a_id,
+            agent_a_name=a.display_name if a else m.agent_a_id,
+            agent_a_archetype=a.archetype if a else None,
+            agent_a_portrait_url=a.primary_portrait_url if a else None,
+            agent_b_id=m.agent_b_id,
+            agent_b_name=b.display_name if b else m.agent_b_id,
+            agent_b_archetype=b.archetype if b else None,
+            agent_b_portrait_url=b.primary_portrait_url if b else None,
+            compatibility_score=m.compatibility_score,
+            compatibility_breakdown=m.compatibility_breakdown,
+            chemistry_score=m.chemistry_score,
+            status=m.status,
+            matched_at=m.matched_at,
+            last_message_at=m.last_message_at,
+            dissolved_at=m.dissolved_at,
+            dissolution_reason=m.dissolution_reason,
+            message_count=msg_counts.get(m.id, 0),
+        )
+
+    return [_to_admin_match(m) for m in matches]
 
 
 # ---------------------------------------------------------------------------
@@ -529,6 +584,18 @@ async def create_agent_match(
     agent_b = agent_b_result.scalar_one_or_none()
     if agent_b is None:
         raise AgentNotFound("Target agent does not exist.")
+    # Prevent duplicate active matches between the same pair
+    existing = (await db.execute(
+        select(Match).where(
+            Match.status == "ACTIVE",
+            or_(
+                and_(Match.agent_a_id == agent_a.id, Match.agent_b_id == agent_b.id),
+                and_(Match.agent_a_id == agent_b.id, Match.agent_b_id == agent_a.id),
+            ),
+        )
+    )).scalar_one_or_none()
+    if existing is not None:
+        return await _build_admin_match(existing, db)
     breakdown = compute_compatibility(agent_a, agent_b)
     new_match = Match(
         agent_a_id=agent_a.id,
@@ -683,7 +750,7 @@ async def random_match_agent(
 
 
 class AdminAutoMatchRequest(BaseModel):
-    threshold: float = 0.65
+    threshold: float = Field(default=0.65, ge=0.0, le=1.0)
 
 
 @router.post("/agents/{agent_id}/auto-match", response_model=AdminAutoMatchResult)

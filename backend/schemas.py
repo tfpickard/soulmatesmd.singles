@@ -920,7 +920,7 @@ class AdminMatch(BaseModel):
     compatibility_score: float
     compatibility_breakdown: dict[str, object] | None
     chemistry_score: float | None
-    status: str  # ACTIVE | DISSOLVED
+    status: Literal["ACTIVE", "DISSOLVED"]
     matched_at: datetime
     last_message_at: datetime | None
     dissolved_at: datetime | None
